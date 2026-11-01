@@ -131,7 +131,7 @@ public sealed partial class SandboxOverlayView : FrameworkElement
         if (!m.HintsOnly && m.Scan is { Theme: { } runTheme, Layout: { } themeLayout })
         {
             var b = themeLayout.ToPixels(ScreenLayout.ThemeName);
-            Pill(dc, $"Run theme: {RunThemes.NameOf(runTheme)} (kept for this run)", new Point((b.X0 + b.X1) / 2.0 * sx, b.Y1 * sy + 4), InstrumentBrush, Math.Clamp(13 * themeLayout.K * sx, 10, 20), ppd, centerX: true);
+            Pill(dc, $"本局主题：{RunThemes.NameOf(runTheme)}（本局保留）", new Point((b.X0 + b.X1) / 2.0 * sx, b.Y1 * sy + 4), InstrumentBrush, Math.Clamp(13 * themeLayout.K * sx, 10, 20), ppd, centerX: true);
         }
         if (m.Scan is not { Ok: true, Cells: { } cells } || m.Sandbox is not { } sandbox) return;
         double fontSize = Math.Clamp(11 * sx * (cells.Count > 1 ? cells[1].K : 1) / 0.9, 9, 16);
@@ -166,14 +166,14 @@ public sealed partial class SandboxOverlayView : FrameworkElement
             string? caption = label.Kind switch
             {
                 // Two lines: the cells sit close.
-                CellKind.Inmate => $"{Codes.Name(label.Code)}\n{label.Rarity}" + (label.Tusk ? "\nTusk" : "") + (label.Prey ? "\nPrey" : ""),
-                CellKind.Unopened => "Unopened" + (label.VisibleRarity is { } vr ? $"\n?{vr}" : "") + (label.ScratchMarks ? "\nScratch Marks" : "") + (label.Nest ? "\nRat Nest" : ""),
-                CellKind.InterrogationRoom => "Interrogation Room",
-                _ => m.EditMode ? "Empty" : null,
+                CellKind.Inmate => $"{Codes.Name(label.Code)}\n{label.Rarity}" + (label.Tusk ? "\n象牙" : "") + (label.Prey ? "\n猎物" : ""),
+                CellKind.Unopened => "未开启" + (label.VisibleRarity is { } vr ? $"\n?{vr}" : "") + (label.ScratchMarks ? "\n划痕" : "") + (label.Nest ? "\n鼠巢" : ""),
+                CellKind.InterrogationRoom => "审讯室",
+                _ => m.EditMode ? "空" : null,
             };
             if (caption != null)
             {
-                if (label.Covered) caption += "\n(covered)";
+                if (label.Covered) caption += "\n（被遮挡）";
                 else if (unsure) caption += " ?";
                 if (label.Edited) caption = "✎ " + caption;
                 Pill(dc, caption, new Point(box.Left + box.Width / 2, box.Top - 2), color, fontSize, ppd, centerX: true, above: true);
@@ -190,11 +190,11 @@ public sealed partial class SandboxOverlayView : FrameworkElement
         // Sandbox-level reads, just above the Interrogation Room.
         var room = cells[0];
         var (ox0, oy0, _, _) = SandboxGeometry.FrameBox(room.X, room.Y, room.K);
-        string header = $"Remaining Days {sandbox.Days?.ToString(CultureInfo.InvariantCulture) ?? "?"}"
+        string header = $"剩余天数 {sandbox.Days?.ToString(CultureInfo.InvariantCulture) ?? "?"}"
             + (sandbox.Theme is { } theme ? $" · {RunThemes.NameOf(theme)}" : "")
-            + (m.Scan.Text?.Objective is { } objective ? $" · Objective: {objective}" + (m.Scan.Text.Progress is { } p ? $" {p.Done}/{p.Goal}" : "") : "")
+            + (m.Scan.Text?.Objective is { } objective ? $" · 目标：{objective}" + (m.Scan.Text.Progress is { } p ? $" {p.Done}/{p.Goal}" : "") : "")
             + (m.Scan.Text?.Title is { } title ? $" · {title}" : "")
-            + $" · {m.Scan.TotalMs:0} ms" + (m.Scan.Timings.TryGetValue("ocr", out var ocrMs) ? $" (ocr {ocrMs:0}, cells {m.Scan.Timings.GetValueOrDefault("cells"):0})" : "");
+            + $" · {m.Scan.TotalMs:0} ms" + (m.Scan.Timings.TryGetValue("ocr", out var ocrMs) ? $"（OCR {ocrMs:0}，格子 {m.Scan.Timings.GetValueOrDefault("cells"):0}）" : "");
         // Above the Interrogation Room's caption.
         Pill(dc, header, new Point(ox0 * sx, oy0 * sy - 2 * (1.33 * fontSize + 4) - 4), Brushes.White, fontSize, ppd);
 
@@ -221,7 +221,7 @@ public sealed partial class SandboxOverlayView : FrameworkElement
         }
         // Under the last row, from its left slot.
         var last = layout.ToPixels(ScreenLayout.ChromaticSlot(ScreenLayout.ChromaticSlots - 2));
-        string text = $"Chromatic {count}/{ScreenLayout.ChromaticSlots}" + (count >= ScreenLayout.ChromaticSlots ? " (cap)" : "");
+        string text = $"绮彩 {count}/{ScreenLayout.ChromaticSlots}" + (count >= ScreenLayout.ChromaticSlots ? "（已满）" : "");
         Pill(dc, text, new Point(last.X0 * sx, last.Y1 * sy + 6), brush, fontSize, ppd);
     }
 
@@ -254,7 +254,7 @@ public sealed partial class SandboxOverlayView : FrameworkElement
         for (int i = 0; i < Math.Min(held.Count, ScreenLayout.InstrumentSlots); i++)
         {
             var instrument = TortureInstruments.Find(held[i]);
-            string text = $"{i + 1}. " + (instrument?.Caption ?? "Unknown Torture Instrument") + (kept.Contains(i) ? " (remembered)" : "");
+            string text = $"{i + 1}. " + (instrument?.Caption ?? "未知刑具") + (kept.Contains(i) ? "（记忆）" : "");
             y += IconPill(dc, text, InstrumentIcon(held[i]), new Point(listLeft, y), InstrumentBrush, fontSize, ppd) + 4;
         }
     }
@@ -280,12 +280,12 @@ public sealed partial class SandboxOverlayView : FrameworkElement
             var icon = card.Id is { } known ? Icon(treasure ? WardenTreasures.FindIconDir() : TortureInstruments.FindIconDir(), known) : null;
             double h = IconPill(dc, text, icon, new Point(box.Left + box.Width / 2, box.Top - 4), brush, fontSize, ppd, centerX: true, above: true);
             if (!treasure && card.Id is { } wanted && TortureInstruments.WantedForData.Contains(wanted))
-                Pill(dc, "wanted for data: the network doesn't know its marks yet", new Point(box.Left + box.Width / 2, box.Top - h - 8), DataBrush, fontSize * 0.85, ppd, centerX: true, above: true);
+                Pill(dc, "需要采集数据：网络还不认识它的标记", new Point(box.Left + box.Width / 2, box.Top - h - 8), DataBrush, fontSize * 0.85, ppd, centerX: true, above: true);
         }
         if (pick.Rerolls is int rerolls)
         {
             var b = layout.ToPixels(ScreenLayout.PickRerolls);
-            Pill(dc, $"Re-roll: {rerolls}", new Point(b.X0 * sx, b.Y0 * sy - 4), InstrumentBrush, fontSize, ppd, above: true);
+            Pill(dc, $"重新随机：{rerolls}", new Point(b.X0 * sx, b.Y0 * sy - 4), InstrumentBrush, fontSize, ppd, above: true);
             if (frames && rerolls > 0)
             {
                 var r = layout.ToPixels(ScreenLayout.PickRerollButton);
@@ -309,7 +309,7 @@ public sealed partial class SandboxOverlayView : FrameworkElement
             var b = layout.ToPixels(ScreenLayout.ConsumeCancel);
             var box = new Rect(b.X0 * sx, b.Y0 * sy, b.Width * sx, b.Height * sy);
             dc.DrawRoundedRectangle(null, ButtonPen, box, 6, 6);
-            Pill(dc, "Cancel", new Point(box.Left + box.Width / 2, box.Bottom + 2), ButtonBrush, fontSize, ppd, centerX: true);
+            Pill(dc, "取消", new Point(box.Left + box.Width / 2, box.Bottom + 2), ButtonBrush, fontSize, ppd, centerX: true);
         }
     }
 

@@ -62,6 +62,6 @@ public partial class App : Application
         catch { }
         // The app goes on: the player may send a report of it, with what was on screen.
         if (MainWindow is ControlWindow control && BugReports.Enabled) control.Report(e.Exception);
-        else MessageBox.Show(e.Exception.ToString(), "Tartarus Solver: error", MessageBoxButton.OK, MessageBoxImage.Error);
+        else MessageBox.Show(e.Exception.ToString(), "Tartarus Solver：错误", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }

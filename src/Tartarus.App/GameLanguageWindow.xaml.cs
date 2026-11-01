@@ -16,8 +16,8 @@ public partial class GameLanguageWindow : Window
     public GameLanguageWindow(string current)
     {
         InitializeComponent();
-        Message.Text = $"The game's text can't be read as {OcrPacks.LanguageName(current)}: move hints may be missing or wrong. "
-            + "Which language does the game show?";
+        Message.Text = $"无法按 {OcrPacks.LanguageName(current)} 识别游戏文字：走法提示可能缺失或出错。"
+            + "游戏显示的是哪种语言？";
         foreach (var code in OcrPacks.GameLanguages)
         {
             string name = OcrPacks.LanguageName(code), native = OcrPacks.NativeName(code);

@@ -43,7 +43,7 @@ public sealed partial class SandboxOverlayView
         // The expected chests of a rarity at the Riot, in tenths, always both: every hint looks alike.
         // The rarity's name stands in when its icon isn't there.
         var parts = new List<(ImageSource? Icon, string Text, Brush Brush)>();
-        foreach (var (chest, name, expected) in new[] { ("chromatic", "Chromatic", best.Value.Chromatic), ("ultimate", "Ultimate", best.Value.Ultimate) })
+        foreach (var (chest, name, expected) in new[] { ("chromatic", "绮彩", best.Value.Chromatic), ("ultimate", "至臻", best.Value.Ultimate) })
         {
             var icon = Icon(ChestDir, chest);
             parts.Add((icon, (icon == null ? name + " " : "") + "×" + expected.ToString("0.0", CultureInfo.InvariantCulture), HintBrush));
@@ -159,11 +159,11 @@ public sealed partial class SandboxOverlayView
         var best = shown[0];
         var ties = shown.Skip(1).Where(a => best.Mean - a.Mean < Hint.TieWithin).ToList();
         var next = shown.Skip(1 + ties.Count).FirstOrDefault();
-        string text = $"Hint: {Name(best)}"
-            + string.Concat(ties.Select(t => $" ≈ {Name(t)}")) + (ties.Count > 0 ? " (tied)" : "")
-            + $" — at the Riot ≈{best.Chromatic:0.0} Chromatic · {best.Ultimate:0.0} Ultimate · {best.Legendary:0.0} Legendary"
-            + (next != null ? $" · then {Name(next)}" : "")
-            + $"  ({hint.Result.Playouts.ToString("N0", CultureInfo.InvariantCulture)} playouts{(hint.Final ? "" : ", computing…")})";
+        string text = $"提示：{Name(best)}"
+            + string.Concat(ties.Select(t => $" ≈ {Name(t)}")) + (ties.Count > 0 ? "（并列）" : "")
+            + $" — 暴乱时约 {best.Chromatic:0.0} 绮彩 · {best.Ultimate:0.0} 至臻 · {best.Legendary:0.0} 传奇"
+            + (next != null ? $" · 其次 {Name(next)}" : "")
+            + $"  （{hint.Result.Playouts.ToString("N0", CultureInfo.InvariantCulture)} 次模拟{(hint.Final ? "" : "，计算中…")}）";
         Pill(dc, text, new Point(8, 34), HintBrush, 13, ppd);
     }
 

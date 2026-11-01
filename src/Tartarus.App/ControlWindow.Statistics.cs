@@ -28,9 +28,9 @@ public partial class ControlWindow
     {
         var s = _stats;
         StatsText.Text = s.Runs == 0
-            ? "No runs yet: a run counts once the game's log has seen it from its Start to the Riot"
-            : $"Runs: {s.Runs} · Chromatic: {s.Chromatic} ({s.ChromaticPerRun:0.00} per run)";
-        StatsText.ToolTip = $"Since {s.Since.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)}; runs the game's log saw from their Start to the Riot";
+            ? "暂无对局：游戏日志记录到一局从开始到暴乱的全过程后才计入"
+            : $"对局：{s.Runs} · 绮彩：{s.Chromatic}（每局 {s.ChromaticPerRun:0.00}）";
+        StatsText.ToolTip = $"自 {s.Since.ToLocalTime().ToString("dd.MM.yyyy HH:mm", CultureInfo.InvariantCulture)} 起；统计游戏日志中从开始到暴乱完整记录的对局";
     }
 
     /// <summary>"1:02:03", or "12:34" under an hour.</summary>
@@ -39,8 +39,8 @@ public partial class ControlWindow
 
     private void ResetStatsButton_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, $"Clear the statistics ({_stats.Runs} runs, {_stats.Chromatic} Chromatic) and count from now on?",
-                "Tartarus Solver: statistics", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (MessageBox.Show(this, $"清空统计（{_stats.Runs} 局，{_stats.Chromatic} 个绮彩）并从现在起重新计数？",
+                "Tartarus Solver：统计", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _stats.Reset();
         Log("Statistics reset");
         ShowStats();

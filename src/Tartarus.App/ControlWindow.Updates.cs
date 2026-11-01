@@ -80,9 +80,9 @@ public partial class ControlWindow
     private void ShowUpdate(Updates.Release release)
     {
         bool install = release.Url != null && Updates.Installed;
-        UpdateButton.Content = $"Update to {release.Version}";
+        UpdateButton.Content = $"更新到 {release.Version}";
         string notes = release.Notes.Length > 1500 ? release.Notes[..1500] + "…" : release.Notes;
-        UpdateButton.ToolTip = (install ? $"Download {release.Asset} ({release.Size / 1048576.0:0} MB), install it and restart" : "Open the release's page")
+        UpdateButton.ToolTip = (install ? $"下载 {release.Asset}（{release.Size / 1048576.0:0} MB），安装并重启" : "打开发布页面")
             + (notes.Length > 0 ? "\n\n" + notes : "");
         UpdateButton.Visibility = Visibility.Visible;
     }
@@ -96,16 +96,16 @@ public partial class ControlWindow
             Process.Start(new ProcessStartInfo(release.Page) { UseShellExecute = true });
             return;
         }
-        if (MessageBox.Show(this, $"Download version {release.Version} ({release.Size / 1048576.0:0} MB), put it in place of this one and restart the app?",
-                "Tartarus Solver: update", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (MessageBox.Show(this, $"下载 {release.Version} 版（{release.Size / 1048576.0:0} MB），替换当前版本并重启程序？",
+                "Tartarus Solver：更新", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _updating = true;
         UpdateButton.IsEnabled = false;
         try
         {
-            var progress = new Progress<double>(p => UpdateButton.Content = $"Downloading… {p * 100:0}%");
+            var progress = new Progress<double>(p => UpdateButton.Content = $"正在下载… {p * 100:0}%");
             string app = await Updates.DownloadAsync(release, progress);
             Log($"Update: {release.Asset} downloaded and checked, installing");
-            UpdateButton.Content = "Installing…";
+            UpdateButton.Content = "正在安装…";
             // Windows may check the fresh exe for seconds before it starts (2026-10-28, a player's Sentry hang): off the
             // UI thread, so the window keeps answering.
             var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
@@ -115,8 +115,8 @@ public partial class ControlWindow
         catch (Exception ex)
         {
             Log("Update failed: " + ex.Message);
-            MessageBox.Show(this, $"The update failed: {ex.Message}", "Tartarus Solver: update", MessageBoxButton.OK, MessageBoxImage.Warning);
-            UpdateButton.Content = $"Update to {release.Version}";
+            MessageBox.Show(this, $"更新失败：{ex.Message}", "Tartarus Solver：更新", MessageBoxButton.OK, MessageBoxImage.Warning);
+            UpdateButton.Content = $"更新到 {release.Version}";
             UpdateButton.IsEnabled = true;
             _updating = false;
         }

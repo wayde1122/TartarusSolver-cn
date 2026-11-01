@@ -69,8 +69,8 @@ public partial class ControlWindow : Window
                     + string.Concat(ranked.Skip(1).Where(t => best.Mean - t.Mean < Hint.TieWithin).Select(t => $", tied with {SandboxOverlayView.RankedName(hint, t)} ≈{t.Mean:0.000}"))
                     + $" ({hint.Result.Elapsed.TotalMilliseconds:0} ms)");
             _hint = hint;
-            HintStatus.Text = $"Last hint: {hint.Result.Elapsed.TotalMilliseconds:0} ms, {hint.Result.Playouts:N0} playouts"
-                + (_hints.Net != null ? " · value net" : " · no value net") + (_hints.Policy != null ? " · policy net" : "") + (_hints.Picks != null ? " · picks net" : "");
+            HintStatus.Text = $"上次提示：{hint.Result.Elapsed.TotalMilliseconds:0} ms，{hint.Result.Playouts:N0} 次模拟"
+                + (_hints.Net != null ? " · 价值网络" : " · 无价值网络") + (_hints.Policy != null ? " · 策略网络" : "") + (_hints.Picks != null ? " · 选择网络" : "");
             RefreshOverlay();
         });
         _dataset = new Dataset(settings.DatasetDir);
@@ -86,18 +86,18 @@ public partial class ControlWindow : Window
         else WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
         string Hk(string action) => settings.Hotkeys.TryGetValue(action, out var g) && !string.IsNullOrWhiteSpace(g) ? $" ({g})" : "";
-        ScanButton.Content = "Scan" + Hk("scan");
-        OverlayCheck.Content = "Overlay" + Hk("overlay");
-        EditCheck.Content = "Edit mode" + Hk("edit");
-        SaveButton.Content = "Save frame" + Hk("save");
-        AutoScanCheck.Content = "Auto" + Hk("auto") + ", every";
-        ReportButton.Content = "Report a bug" + Hk("report");
-        Title = $"Tartarus Solver {AppVersion.Number}" + (settings.Debug ? " (debug)" : "");
+        ScanButton.Content = "扫描" + Hk("scan");
+        OverlayCheck.Content = "叠加层" + Hk("overlay");
+        EditCheck.Content = "编辑模式" + Hk("edit");
+        SaveButton.Content = "保存帧" + Hk("save");
+        AutoScanCheck.Content = "自动" + Hk("auto") + "，间隔";
+        ReportButton.Content = "报告问题" + Hk("report");
+        Title = $"Tartarus Solver {AppVersion.Number}" + (settings.Debug ? "（调试）" : "");
         // The player's window: the game window, scanning, the hints' quality, the game's log, the version
         // and bug reports.
         if (!settings.Debug)
             foreach (var panel in new FrameworkElement[] { ViewPanel, HintsCheck, HintsOnlyCheck, DebugPanel }) panel.Visibility = Visibility.Collapsed;
-        VersionText.Text = "Version " + AppVersion.Short;
+        VersionText.Text = "版本 " + AppVersion.Short;
         VersionText.ToolTip = AppVersion.Full;
         Log("Version " + AppVersion.Short + (BugReports.Enabled ? "" : " · bug reports not set up"));
 
@@ -358,7 +358,7 @@ public partial class ControlWindow : Window
         if (_capture != null || _startingCapture || _findingGame) return;
         if (AutoAttachCheck.IsChecked != true)
         {
-            CaptureStatus.Text = "Not capturing";
+            CaptureStatus.Text = "未在捕获";
             return;
         }
         var pattern = new Regex(_settings.WindowTitle);
@@ -370,8 +370,8 @@ public partial class ControlWindow : Window
         if (_capture != null || AutoAttachCheck.IsChecked != true) return;
         // What it waits for, said (2026-11-01: players started the app with the game minimized or not yet running, saw
         // only "Not capturing" and sent bug reports).
-        if (game.Hwnd == IntPtr.Zero) CaptureStatus.Text = "Not capturing: waiting for the game window (Torchlight: Infinite)…";
-        else if (Win32Windows.IsMinimized(game.Hwnd)) CaptureStatus.Text = "Not capturing: the game window is minimized, restore it";
+        if (game.Hwnd == IntPtr.Zero) CaptureStatus.Text = "未在捕获：正在等待游戏窗口（Torchlight: Infinite）…";
+        else if (Win32Windows.IsMinimized(game.Hwnd)) CaptureStatus.Text = "未在捕获：游戏窗口已最小化，请还原窗口";
         else StartCapture(game);
     }
 
@@ -394,8 +394,8 @@ public partial class ControlWindow : Window
             });
             _capture = capture;
             _target = w;
-            CaptureButton.Content = "Stop ■";
-            CaptureStatus.Text = $"Capturing: {w}";
+            CaptureButton.Content = "停止 ■";
+            CaptureStatus.Text = $"正在捕获：{w}";
             Log($"Capturing window \"{w.Title}\" ({w.Process}), {Win32Windows.VisibleBounds(w.Hwnd)}");
             // The log of the very install that's running, from its executable's path.
             if (Win32Windows.ImagePath(w.Pid) is { } exe) StartGameLog(exe);
@@ -417,8 +417,8 @@ public partial class ControlWindow : Window
         if (_capture is { } old) Task.Run(old.Dispose);
         _capture = null;
         _target = null;
-        CaptureButton.Content = "Capture ▶";
-        CaptureStatus.Text = "Not capturing";
+        CaptureButton.Content = "开始捕获 ▶";
+        CaptureStatus.Text = "未在捕获";
         if (hideOverlay && _overlay.IsVisible) _overlay.Hide();
     }
 
@@ -550,11 +550,11 @@ public partial class ControlWindow : Window
             ShowText = TextCheck.IsChecked == true,
             KeptInstruments = stale ? new HashSet<int>() : new HashSet<int>(_run.Kept),
             Hint = stale || !_settings.Hints ? null : _hint,
-            Status = stale ? "Tartarus: the window's size changed, a new scan is needed" : _status,
+            Status = stale ? "Tartarus：窗口大小已改变，需要重新扫描" : _status,
             // The game keeps the picture it drew before its window was resized by the edges: its layout is only
             // guessed (2026-10-30, a player's report: nothing read).
             Warning = _scan?.Notes?.Any(n => n.StartsWith(Vision.GamePicture.Note, StringComparison.Ordinal)) == true
-                ? "The game's picture doesn't fill its window: set the window size in the game's settings, or press Alt+Enter twice"
+                ? "游戏画面没有填满窗口：请在游戏设置中设定窗口大小，或按两次 Alt+Enter"
                 : null,
             EyeHint = !stale && _settings.Hints && _eyeHint,
             HintsOnly = _settings.Hints && _settings.HintsOnly,
@@ -568,7 +568,7 @@ public partial class ControlWindow : Window
     {
         if (_capture == null)
         {
-            if (manual) ScanStatus.Text = "Not capturing a window";
+            if (manual) ScanStatus.Text = "未在捕获任何窗口";
             return false;
         }
         if (_scans.Busy || (_editMode && !manual)) return false;
@@ -593,7 +593,7 @@ public partial class ControlWindow : Window
         if (capture != _capture) return false;
         if (frame == null)
         {
-            if (manual) ScanStatus.Text = "No frames yet (is the window minimized?)";
+            if (manual) ScanStatus.Text = "还没有画面（窗口是否已最小化？）";
             return false;
         }
         ScanResult r;
@@ -671,12 +671,12 @@ public partial class ControlWindow : Window
         _sandbox = _scannedSandbox.Clone();
         _selected = -1;
         _savedSinceScan = false;
-        _status = r.Ok ? null : manual || _editMode ? $"Tartarus: no Sandbox found ({r.TotalMs:0} ms)" : null;
+        _status = r.Ok ? null : manual || _editMode ? $"Tartarus：未找到棋盘（{r.TotalMs:0} ms）" : null;
         RefreshOverlay();
         RefreshLabelsUi();
-        ScanStatus.Text = (r.Ok ? $"Sandbox · {r.TotalMs:0} ms" : $"No Sandbox: {r.Reason} · {r.TotalMs:0} ms")
-            + (r.Timings.TryGetValue("ocr", out var ocrMs) ? $" (OCR {ocrMs:0}, cells {r.Timings.GetValueOrDefault("cells"):0})" : "")
-            + (r.Timings.ContainsKey("presence") ? $" · presence {r.Loc?.Score:0.00}" : "")
+        ScanStatus.Text = (r.Ok ? $"棋盘 · {r.TotalMs:0} ms" : $"未找到棋盘：{r.Reason} · {r.TotalMs:0} ms")
+            + (r.Timings.TryGetValue("ocr", out var ocrMs) ? $"（OCR {ocrMs:0}，格子 {r.Timings.GetValueOrDefault("cells"):0}）" : "")
+            + (r.Timings.ContainsKey("presence") ? $" · 置信度 {r.Loc?.Score:0.00}" : "")
             + $" · {frame.Width}×{frame.Height} · {r.Source}";
         string description = SandboxText.Describe(r);
         // What was read, without the scan's timing and presence score (they differ every scan).
@@ -715,7 +715,7 @@ public partial class ControlWindow : Window
     private void ShowHintLevel()
     {
         var level = _hintLevels[Math.Clamp((int)HintSlider.Value, 0, _hintLevels.Count - 1)];
-        HintLevelText.Text = $"~{level.Milliseconds:0.#} ms per move · ≈{level.Chromatic:0.0} Chromatic per run ({level.Playouts:N0} playouts per move)";
+        HintLevelText.Text = $"每步约 {level.Milliseconds:0.#} ms · 每局约 {level.Chromatic:0.0} 个绮彩（每步 {level.Playouts:N0} 次模拟）";
     }
 
     private void HintSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -828,14 +828,14 @@ public partial class ControlWindow : Window
     }
 
     private void ShowLogStatus() => LogStatus.Text =
-        (_gameLogPath ?? "not found: screen recognition only") + (_settings.GameLogPath != null ? " (chosen by hand)" : " (found automatically)");
+        (_gameLogPath ?? "未找到：仅使用画面识别") + (_settings.GameLogPath != null ? "（手动选择）" : "（自动找到）");
 
     private void PickLogButton_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "UE_game.log: game folder\\UE_game\\TorchLight\\Saved\\Logs",
-            Filter = "Game log (UE_game.log)|UE_game.log|Logs (*.log)|*.log",
+            Title = "UE_game.log：游戏目录\\UE_game\\TorchLight\\Saved\\Logs",
+            Filter = "游戏日志 (UE_game.log)|UE_game.log|日志文件 (*.log)|*.log",
             InitialDirectory = _gameLogPath != null ? Path.GetDirectoryName(_gameLogPath) : null,
         };
         if (dialog.ShowDialog(this) != true) return;
@@ -1331,7 +1331,7 @@ public partial class ControlWindow : Window
     }
 
     private void ShowInterval() =>
-        IntervalText.Text = _settings.AutoScanSeconds > 0 ? $"{_settings.AutoScanSeconds:0.0} s" : "0 s (as soon as done)";
+        IntervalText.Text = _settings.AutoScanSeconds > 0 ? $"{_settings.AutoScanSeconds:0.0} 秒" : "0 秒（完成即继续）";
 
     private void OverlayCheck_Changed(object sender, RoutedEventArgs e)
     {
@@ -1385,13 +1385,13 @@ public partial class ControlWindow : Window
         var cell = sandbox.Cells[idx];
         int n = idx + 1;
         var menu = new ContextMenu();
-        menu.Items.Add(new MenuItem { Header = $"Cell {n}: {SandboxText.CellShort(cell)}", IsEnabled = false });
+        menu.Items.Add(new MenuItem { Header = $"{n} 号格：{SandboxText.CellShort(cell)}", IsEnabled = false });
         menu.Items.Add(new Separator());
 
         if (idx > 0)
         {
-            menu.Items.Add(Item("Opened, empty", cell.Kind == CellKind.Empty, () => SetKind(cell, CellKind.Empty)));
-            menu.Items.Add(Item("Unopened", cell.Kind == CellKind.Unopened, () => SetKind(cell, CellKind.Unopened)));
+            menu.Items.Add(Item("已开启，空", cell.Kind == CellKind.Empty, () => SetKind(cell, CellKind.Empty)));
+            menu.Items.Add(Item("未开启", cell.Kind == CellKind.Unopened, () => SetKind(cell, CellKind.Unopened)));
             menu.Items.Add(new Separator());
             // An Inmate: its Code, then its rarity (Normal .. Ultimate: Chromatic leaves the Sandbox).
             foreach (var code in Codes.All)
@@ -1413,12 +1413,12 @@ public partial class ControlWindow : Window
                 menu.Items.Add(sub);
             }
             menu.Items.Add(new Separator());
-            menu.Items.Add(Item("Consumable target", cell.Consumable, () => cell.Consumable = !cell.Consumable));
-            menu.Items.Add(Item("Tusk (Iron Tongs of Lust: Mammoth)", cell.Tusk, () => cell.Tusk = !cell.Tusk));
-            menu.Items.Add(Item("Prey (Hunt, Blood-Stained Trap)", cell.Prey, () => cell.Prey = !cell.Prey));
-            menu.Items.Add(Item("Rat Nest (Squirming Iron Box)", cell.Nest, () => cell.Nest = !cell.Nest));
-            var visibleMenu = new MenuItem { Header = "Visible rarity (Unopened)", IsChecked = cell.VisibleRarity != null };
-            visibleMenu.Items.Add(Item("none", cell.VisibleRarity == null, () => cell.VisibleRarity = null));
+            menu.Items.Add(Item("可吃目标", cell.Consumable, () => cell.Consumable = !cell.Consumable));
+            menu.Items.Add(Item("象牙（恶欲铁钳：巨象）", cell.Tusk, () => cell.Tusk = !cell.Tusk));
+            menu.Items.Add(Item("猎物（寻猎、染红的捕兽夹）", cell.Prey, () => cell.Prey = !cell.Prey));
+            menu.Items.Add(Item("鼠巢（蠕动铁盒）", cell.Nest, () => cell.Nest = !cell.Nest));
+            var visibleMenu = new MenuItem { Header = "可见稀有度（未开启）", IsChecked = cell.VisibleRarity != null };
+            visibleMenu.Items.Add(Item("无", cell.VisibleRarity == null, () => cell.VisibleRarity = null));
             for (var rarity = Rarity.Normal; rarity <= Rarity.Ultimate; rarity++)
             {
                 var t = rarity;
@@ -1431,21 +1431,21 @@ public partial class ControlWindow : Window
                 visibleMenu.Items.Add(item);
             }
             menu.Items.Add(visibleMenu);
-            menu.Items.Add(Item("Scratch Marks (Filthy Claws)", cell.ScratchMarks, () =>
+            menu.Items.Add(Item("划痕（脏污铁爪）", cell.ScratchMarks, () =>
             {
                 SetKind(cell, CellKind.Unopened);
                 cell.ScratchMarks = !cell.ScratchMarks;
             }));
-            menu.Items.Add(Item("Prison Incident (!)", cell.Incident, () => cell.Incident = !cell.Incident));
-            menu.Items.Add(Item("Covered by the UI (not judged)", cell.Covered, () => cell.Covered = !cell.Covered));
+            menu.Items.Add(Item("狱中事变 (!)", cell.Incident, () => cell.Incident = !cell.Incident));
+            menu.Items.Add(Item("被界面遮挡（不判定）", cell.Covered, () => cell.Covered = !cell.Covered));
             menu.Items.Add(new Separator());
         }
-        menu.Items.Add(Item("Warden here", sandbox.Warden == n, () =>
+        menu.Items.Add(Item("典狱长在此", sandbox.Warden == n, () =>
         {
             sandbox.Warden = n;
             sandbox.SandboxEdited = true;
         }, cellEdit: false));
-        menu.Items.Add(Item(sandbox.Destinations.Contains(n) ? $"Remove from Destinations (D{sandbox.Destinations.IndexOf(n) + 1})" : $"Add to Destinations (D{sandbox.Destinations.Count + 1})", sandbox.Destinations.Contains(n), () =>
+        menu.Items.Add(Item(sandbox.Destinations.Contains(n) ? $"移出目的地 (D{sandbox.Destinations.IndexOf(n) + 1})" : $"加入目的地 (D{sandbox.Destinations.Count + 1})", sandbox.Destinations.Contains(n), () =>
         {
             if (!sandbox.Destinations.Remove(n)) sandbox.Destinations.Add(n);
             sandbox.Phase = sandbox.Destinations.Count > 0 ? Phases.Destination : Phases.Decision;
@@ -1454,7 +1454,7 @@ public partial class ControlWindow : Window
         if (_scannedSandbox != null && idx > 0)
         {
             menu.Items.Add(new Separator());
-            menu.Items.Add(Item("Back to the scan", false, () => sandbox.Cells[idx] = _scannedSandbox.Cells[idx].Clone(), cellEdit: false));
+            menu.Items.Add(Item("恢复为扫描结果", false, () => sandbox.Cells[idx] = _scannedSandbox.Cells[idx].Clone(), cellEdit: false));
         }
         return menu;
 
@@ -1502,7 +1502,7 @@ public partial class ControlWindow : Window
         InstrumentsBox.Text = b == null ? "" : string.Join(",", b.Instruments);
         SandboxSummary.Text = b == null ? "" : Summary(b);
 
-        static string Summary(EditableSandbox b) => SandboxText.Describe(b) + (b.AnyEdited ? "  (edited)" : "");
+        static string Summary(EditableSandbox b) => SandboxText.Describe(b) + (b.AnyEdited ? "  （已编辑）" : "");
     }
 
     private void ApplyLabelsButton_Click(object sender, RoutedEventArgs e)
@@ -1559,7 +1559,7 @@ public partial class ControlWindow : Window
     private void UpdateDatasetStatus()
     {
         int count = Directory.Exists(_dataset.FramesDir) ? Directory.EnumerateFiles(_dataset.FramesDir, "*.png").Count() : 0;
-        DatasetStatus.Text = $"{_dataset.Root} · frames: {count}";
+        DatasetStatus.Text = $"{_dataset.Root} · 帧数：{count}";
     }
 
     private void OpenDatasetButton_Click(object sender, RoutedEventArgs e)

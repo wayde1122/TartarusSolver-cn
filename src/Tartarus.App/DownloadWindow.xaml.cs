@@ -20,16 +20,16 @@ public partial class DownloadWindow : Window
         _pack = pack;
         InitializeComponent();
         string language = OcrPacks.LanguageName(languageCode);
-        Message.Text = $"The game is in {language}. Reading its text needs the {language} text recognition model "
-            + $"({pack.Size / 1048576.0:0.#} MB, PaddleOCR). Download it now?\n\nWithout it the game's text won't be recognized; "
-            + "cards and picks are still told apart by their pictures.";
+        Message.Text = $"游戏语言为 {language}。识别游戏文字需要 {language} 文字识别模型"
+            + $"（{pack.Size / 1048576.0:0.#} MB，PaddleOCR）。现在下载吗？\n\n不下载的话将无法识别游戏文字，"
+            + "但卡牌和选择界面仍可通过图片区分。";
         Result = $"OCR: {language} recognizer not downloaded, the game's text won't be read";
     }
 
     private async void DownloadButton_Click(object sender, RoutedEventArgs e)
     {
         DownloadButton.IsEnabled = false;
-        CancelButton.Content = "Cancel";
+        CancelButton.Content = "取消";
         Bar.Visibility = Status.Visibility = Visibility.Visible;
         _cancel = new CancellationTokenSource();
         // Which host it comes from: Hugging Face, else its mirror (blocked in China).
@@ -37,12 +37,12 @@ public partial class DownloadWindow : Window
         var progress = new Progress<(long Done, long Total)>(p =>
         {
             Bar.Value = p.Total > 0 ? (double)p.Done / p.Total : 0;
-            Status.Text = $"{p.Done / 1048576.0:0.0} of {p.Total / 1048576.0:0.0} MB from {from}";
+            Status.Text = $"{p.Done / 1048576.0:0.0} / {p.Total / 1048576.0:0.0} MB，来自 {from}";
         });
         var host = new Progress<string>(h =>
         {
             from = h;
-            Status.Text = $"Connecting to {h}…";
+            Status.Text = $"正在连接 {h}…";
         });
         try
         {
@@ -60,10 +60,10 @@ public partial class DownloadWindow : Window
         catch (Exception ex)
         {
             Result = $"OCR: {_pack.Id} recognizer download failed: {ex.Message}";
-            Status.Text = "Download failed: " + ex.Message;
+            Status.Text = "下载失败：" + ex.Message;
             DownloadButton.IsEnabled = true;
-            DownloadButton.Content = "Retry";
-            CancelButton.Content = "Not now";
+            DownloadButton.Content = "重试";
+            CancelButton.Content = "以后再说";
             _cancel = null;
         }
     }

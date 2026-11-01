@@ -14,7 +14,7 @@ public partial class ReportWindow : Window
     {
         _report = report;
         InitializeComponent();
-        if (report.Crash != null) Prompt.Text = "The app caught an error. What were you doing just before it?";
+        if (report.Crash != null) Prompt.Text = "程序捕获到一个错误。出错前你在做什么？";
         Loaded += (_, _) =>
         {
             Activate();
@@ -25,7 +25,7 @@ public partial class ReportWindow : Window
     private async void SendButton_Click(object sender, RoutedEventArgs e)
     {
         SendButton.IsEnabled = CancelButton.IsEnabled = CommentBox.IsEnabled = false;
-        StatusText.Text = "Sending…";
+        StatusText.Text = "正在发送…";
         StatusText.Visibility = Visibility.Visible;
         string comment = CommentBox.Text;
         Result = await Task.Run(() => BugReports.SendAsync(_report, comment));

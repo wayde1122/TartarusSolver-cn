@@ -144,8 +144,8 @@ public static class Updates
         catch (Exception ex)
         {
             Write($"Update to {AppVersion.Number} not installed: {ex.Message}");
-            System.Windows.MessageBox.Show($"Couldn't put version {AppVersion.Number} into {target}:\n{ex.Message}\n\nIt is unpacked in {AppDir}: copy it over by hand or run it from there.",
-                "Tartarus Solver: update", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show($"无法把 {AppVersion.Number} 版放到 {target}：\n{ex.Message}\n\n新版本已解压在 {AppDir}：请手动复制过去，或直接在那里运行。",
+                "Tartarus Solver：更新", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
             Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppDir}\"") { UseShellExecute = true });
         }
     }
