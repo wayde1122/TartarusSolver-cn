@@ -121,7 +121,7 @@ python tools/train/policynet.py actions-*.bin     # 模拟用的策略网络 -> 
 `tartarus-sim compare` 评估一项改动（4000 局配对对局），`tartarus-sim levels` 重新测量 `models/solver/levels.txt`，
 `tartarus-sim calib --table models/solver/chests.txt` 重新拟合提示中的预计宝箱数与对局实际结果的对应关系，
 `tartarus-sim objcheck` 比较搜索在完成目标之前和选择目标时的估值。模拟器默认以 50% 的概率给一局提供重新随机
-（契灵 Twin Inquisitors），可用 `--reroll-percent` 修改。
+（宠物 Twin Inquisitors），可用 `--reroll-percent` 修改。
 
 ## 免责声明
 
