@@ -15,6 +15,50 @@ public class GameLogTests
         Page(time, "CloseView 3535_S16BoardColoredPopCtrl"),
     ];
 
+    private static Frame WithBand(int width, int height, int rows)
+    {
+        var pixels = new byte[width * height * 4];
+        var random = new Random(1);
+        for (int y = 0; y < rows; y++)
+            for (int x = 0; x < width; x++)
+                pixels[(y * width + x) * 4 + random.Next(3)] = (byte)random.Next(256);
+        return new Frame(width, height, pixels, PixelFormat.Bgra32, DateTime.Now);
+    }
+
+    [Theory]
+    [InlineData(1124, 782, 702, false)] // a window that fits: the Sandbox's dark bottom, 1.11 times
+    [InlineData(1650, 1087, 1026, false)] // 1.105 times
+    [InlineData(1106, 851, 720, true)] // an old picture: 1.16 times
+    [InlineData(1120, 858, 747, true)] // 1.19 times
+    public void Only_a_picture_well_bigger_than_the_window_holds_is_an_old_one(int width, int height, int rows, bool old)
+    {
+        var frame = WithBand(width, height, rows);
+        Assert.Equal(old, GamePicture.Of(frame) != frame);
+    }
+
+    [Fact]
+    public void The_Chinese_recognizer_ships_with_the_program()
+    {
+        var dir = Tartarus.Vision.Ocr.OcrEngine.TryFindModelDir();
+        Assert.NotNull(dir);
+        Assert.True(Tartarus.Vision.Ocr.OcrPacks.Exists(Tartarus.Vision.Ocr.OcrPacks.Chinese, dir));
+    }
+
+    [Fact]
+    public void The_UI_scale_is_the_last_one_the_log_tells()
+    {
+        var log = new GameLog();
+        Assert.Null(log.UiScale);
+        Assert.False(log.Feed("[2026.11.01-21.18.15:099][978]TLLua: Display: [Game] PageView@PageViewSetUIScale PageId = 178027_S16BoardTaskPopCtrl, PageScale = 0.64 0.640 0.64"));
+        Assert.Equal(0.64, log.UiScale);
+        log.Feed("[2026.11.01-21.18.17:912][246]TLLua: Display: [Game] PageView@PageViewSetUIScale PageId = 178031_S16BoardMainCtrl, PageScale = 0.7492092192173 0.749 0.749");
+        Assert.Equal(0.7492092192173, log.UiScale);
+        // Not a Tartarus page: the log's reading doesn't look at it.
+        log.Feed("[2026.11.01-21.18.17:912][246]TLLua: Display: [Game] PageView@PageViewSetUIScale PageId = 100_LobbyCtrl, PageScale = 1 1.000 1");
+        Assert.Equal(0.7492092192173, log.UiScale);
+        Assert.Null(log.Current);
+    }
+
     [Fact]
     public void A_Warden_s_Treasure_taken_changes_the_Sandbox()
     {
@@ -242,6 +286,42 @@ public class GameLogTests
     }
 
     [Fact]
+    public void A_fade_s_misread_doesn_t_change_the_run_s_instruments_or_Objective()
+    {
+        // 2026-11-01, a report: as a Warden's Treasure opened, Kin's Coin of Fate read as Ravenous Chains and the done
+        // Behind Cell Doors as Survival of the Fittest 0/4, and the pick was hinted for them.
+        var memory = new RunMemory();
+        Assert.Equal(["coin", "axe"], memory.Instruments(["coin", "axe"]));
+        Assert.Equal(["coin", "axe"], memory.Instruments(["chains", "axe"]));
+        Assert.Equal(["coin", "axe"], memory.Instruments(["chains", "axe"]));
+        // A new slot counts at once.
+        Assert.Equal(["coin", "axe", "saw"], memory.Instruments(["coin", "axe", "saw"]));
+
+        var done = new Observation { Objective = ObjectiveKind.BehindCellDoors, ObjectiveProgress = 10, ObjectiveDone = true };
+        memory.Objective(done);
+        var fade = new Observation { Objective = ObjectiveKind.SurvivalOfTheFittest, ObjectiveProgress = 0 };
+        memory.Objective(fade);
+        Assert.Equal((ObjectiveKind.BehindCellDoors, 10, true), (fade.Objective, fade.ObjectiveProgress, fade.ObjectiveDone));
+        // Readings searched ahead are told the run's Objective without counting toward a change.
+        for (int i = 0; i < RunMemory.ChangeAfter + 1; i++)
+        {
+            var ahead = new Observation { Objective = ObjectiveKind.SurvivalOfTheFittest };
+            memory.Objective(ahead, settled: false);
+            Assert.Equal(ObjectiveKind.BehindCellDoors, ahead.Objective);
+        }
+        var unread = new Observation();
+        memory.Objective(unread);
+        Assert.Equal((ObjectiveKind.BehindCellDoors, true), (unread.Objective, unread.ObjectiveDone));
+        // Read so again and again, it is the run's (the first one was the misread).
+        for (int i = 0; i < RunMemory.ChangeAfter; i++)
+        {
+            var again = new Observation { Objective = ObjectiveKind.PrisonWalk, ObjectiveProgress = 4 };
+            memory.Objective(again);
+            if (i == RunMemory.ChangeAfter - 1) Assert.Equal(ObjectiveKind.PrisonWalk, again.Objective);
+        }
+    }
+
+    [Fact]
     public void A_Replace_is_told_by_its_new_Inmate_s_reveal_not_a_Consume_or_an_End()
     {
         // 2026-10-31: a decision card's click, then the first telling sound: a new Inmate's reveal (Replace), the red
@@ -261,6 +341,12 @@ public class GameLogTests
         log.Feed("[2026.10.31-22.24.51:548][  9]TLLua: Display: [Game] AudioMgr@PlayAudio  AudioEnum  == UI_S16_Date_Change");
         log.Feed("[2026.10.31-22.24.52:340][ 40]TLLua: Display: [Game] AudioMgr@PlayAudio  AudioEnum  == UI_S16_Basic_Quality");
         Assert.Equal(new DateTime(2026, 10, 31, 22, 22, 47, 249, DateTimeKind.Utc).ToLocalTime(), run.ReplacedAt);
+        Assert.True(run.CardTold);
+        // The Hunt card: its click and nothing telling after it (its target pick comes ~2.2 s later).
+        log.Feed("[2026.10.31-22.25.10:000][ 60]TLLua: Display: [Game] AudioMgr@PlayAudio  AudioEnum  == UI_S16_Click_Card");
+        log.Feed("[2026.10.31-22.25.10:006][ 60]TLGame: Display: [Game] UIButton@ normal-click Btn_S16Board_ActionCell");
+        Assert.False(run.CardTold);
+        Assert.Equal(new DateTime(2026, 10, 31, 22, 25, 10, 6, DateTimeKind.Utc).ToLocalTime(), run.CardClickedAt);
     }
 
     [Fact]
@@ -291,5 +377,62 @@ public class GameLogTests
         Assert.True(GameLogWatcher.IsActivity("[2026.10.31-22.24.52:340][ 40]TLLua: Display: [Game] [S16LastDay] check cur=20 max=20 played=false"));
         Assert.False(GameLogWatcher.IsActivity("[2026.10.31-22.24.52:340][ 40]TLLua: Display: [Game] AudioMgr@PlayAudio  AudioEnum  == UI_S16_Cell_Light"));
         Assert.False(GameLogWatcher.IsActivity("[2026.10.31-22.24.52:340][ 40]TLGame: Display: [Game] UIButton@ normal-click Btn_Hideout_Stash"));
+    }
+
+    [Fact]
+    public void The_watcher_reads_a_long_log_as_a_reading_line_by_line_does()
+    {
+        // The watcher keeps only the lines with "S16", cut out of 1 MB chunks: one cut by the first chunk's end, many lines of
+        // the rest of the game between, a run of 20 days.
+        var text = new System.Text.StringBuilder();
+        string filler = "[2026.11.01-09.00.00:000][  1]LogDataTable: Warning: something of the rest of the game, " + new string('x', 60) + "\r\n";
+        void Line(string line) => text.Append(line).Append("\r\n");
+        Line("[2026.11.01-09.00.00:000][  1]TLGame: Display: [Game] UIButton@ normal-click Btn_S16GamePlay_Start");
+        for (int day = 0; day <= 20; day++)
+        {
+            // Day 7's line starts 30 characters before the first chunk's end.
+            int stop = day == 7 ? (1 << 20) - 30 : text.Length + 100_000;
+            while (text.Length + filler.Length <= stop) text.Append(filler);
+            if (day == 7) text.Append(new string('y', stop - text.Length - 2)).Append("\r\n");
+            Line($"[2026.11.01-09.{day:00}.00:000][  1]TLLua: Display: [Game] [S16LastDay] check cur={day} max=20 played=false");
+        }
+        string path = Path.Combine(Path.GetTempPath(), $"tartarus-log-{Guid.NewGuid():N}.log");
+        File.WriteAllText(path, text.ToString());
+        try
+        {
+            var expected = GameLog.Read(path);
+            using var watcher = new GameLogWatcher(path);
+            var waited = System.Diagnostics.Stopwatch.StartNew();
+            while (waited.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                lock (watcher.Log)
+                    if (watcher.Log.Current?.Day == 20) break;
+                Thread.Sleep(50);
+            }
+            lock (watcher.Log)
+            {
+                Assert.Equal(expected.Runs.Count, watcher.Log.Runs.Count);
+                Assert.Equal((expected.Current!.Day, expected.Current.MaxDays, expected.Current.Start), (watcher.Log.Current!.Day, watcher.Log.Current.MaxDays, watcher.Log.Current.Start));
+            }
+            Assert.True(text.Length > 2 << 20);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void RunMemory_RemembersTheDayOfAConsumesTargetPick()
+    {
+        var run = new RunMemory();
+        Assert.False(run.ConsumedOn(12));
+        run.ConsumeSeen(null);
+        Assert.False(run.ConsumedOn(12));
+        run.ConsumeSeen(12);
+        Assert.True(run.ConsumedOn(12));
+        Assert.False(run.ConsumedOn(11));
+        run.NewRun();
+        Assert.False(run.ConsumedOn(12));
     }
 }

@@ -12,15 +12,33 @@ namespace Tartarus.App;
 // after), then sent with the comment.
 public partial class ControlWindow
 {
-    /// <summary>The frames scanned before the current one, oldest first: a bug often shows a second or two before it's reported.</summary>
-    private readonly Queue<Frame> _history = new();
-    private const int HistoryFrames = 6;
+    /// <summary>
+    /// The frames scanned before the current one, oldest first, as JPEGs at half size: a bug often shows a second or
+    /// two before it's reported. Six whole frames held 88 MB at 2560x1440 and 390 MB at 7680x2112 (2026-11-01).
+    /// </summary>
+    private readonly Queue<(DateTimeOffset At, byte[] Jpeg)> _history = new();
+    private const int HistoryFrames = 4;
+    // A report's pictures. Two PNGs made a report 4 MB, 11 at 4K, and the reports used up Sentry's attachment quota
+    // (2026-11-02). A whole frame at 85 reads as its PNG does (48 of 48 report frames) at a seventh of the size; half a
+    // frame doesn't (8 of 48 differ), so only those too big to need the detail are halved. The rest is only looked at.
+    private const int ScreenQuality = 85, GlanceQuality = 70, WholeScreenWidth = 2560;
     private bool _reporting;
 
+    /// <summary><paramref name="frame"/> takes the current one's place: that one goes to the history, its buffer back to the pool.</summary>
     private void RememberFrame(Frame frame)
     {
-        if (_frame != null && _frame != frame) _history.Enqueue(_frame);
-        while (_history.Count > HistoryFrames) _history.Dequeue();
+        if (_frame is not { } old || old == frame) return;
+        _ = Task.Run(() =>
+        {
+            var small = HalfSize(old, _halves);
+            _pixels.Return(old);
+            return (old.Timestamp, Encode(new JpegBitmapEncoder { QualityLevel = GlanceQuality }, small));
+        }).ContinueWith(t => Dispatcher.BeginInvoke(() =>
+        {
+            if (!t.IsCompletedSuccessfully) return;
+            _history.Enqueue(t.Result);
+            while (_history.Count > HistoryFrames) _history.Dequeue();
+        }));
     }
 
     private void ReportButton_Click(object sender, RoutedEventArgs e) => Report();
@@ -61,16 +79,11 @@ public partial class ControlWindow
         if (_frame is { } frame)
         {
             var screen = ToBitmap(frame);
-            report.Files["screen.png"] = Encode(new PngBitmapEncoder(), screen);
-            if (_overlay.View.Model is { } model && model.FrameWidth == frame.Width && model.FrameHeight == frame.Height)
-            {
-                var shot = WithOverlay(screen, model);
-                report.Files["overlay.png"] = Encode(new PngBitmapEncoder(), shot);
-                report.Screenshot = Encode(new JpegBitmapEncoder { QualityLevel = 85 }, shot);
-            }
-            else report.Screenshot = Encode(new JpegBitmapEncoder { QualityLevel = 85 }, screen);
-            foreach (var old in _history)
-                report.Files[$"history/{old.Timestamp.LocalDateTime:HHmmss_fff}.jpg"] = Encode(new JpegBitmapEncoder { QualityLevel = 80 }, ToBitmap(old));
+            report.Files["screen.jpg"] = Encode(new JpegBitmapEncoder { QualityLevel = ScreenQuality }, frame.Width > WholeScreenWidth ? Halved(screen) : screen);
+            var shot = _overlay.View.Model is { } model && model.FrameWidth == frame.Width && model.FrameHeight == frame.Height ? WithOverlay(screen, model) : screen;
+            report.Screenshot = Encode(new JpegBitmapEncoder { QualityLevel = GlanceQuality }, Halved(shot));
+            foreach (var (at, jpeg) in _history)
+                report.Files[$"history/{at.LocalDateTime:HHmmss_fff}.jpg"] = jpeg;
         }
         if (_scan is { } scan)
             report.AddText("scan.json", scan.RawJson.Length > 0 ? scan.RawJson : JsonSerializer.Serialize(scan, VisionJson.Default.ScanResult));
@@ -146,6 +159,41 @@ public partial class ControlWindow
                 picksNet = _hints.Picks != null,
             },
         };
+    }
+
+    // The half-size pictures' buffers: the bitmap made of one copies it, so it goes back at once.
+    private readonly PixelPool _halves = new();
+
+    /// <summary>The frame at half its size (each 2x2 block's average), BGR: a quarter of the pixels to keep and encode.</summary>
+    private static BitmapSource HalfSize(Frame frame, PixelPool pool)
+    {
+        int w = frame.Width / 2, h = frame.Height / 2, stride = frame.Stride;
+        var half = pool.Rent(w * h * 4);
+        var src = frame.Pixels;
+        // Blue and red trade places in an RGBA frame.
+        int b = frame.Format == Vision.PixelFormat.Rgba32 ? 2 : 0, r = 2 - b;
+        for (int y = 0; y < h; y++)
+        {
+            int top = 2 * y * stride, bottom = top + stride, o = y * w * 4;
+            for (int x = 0; x < w; x++, o += 4)
+            {
+                int i = top + 8 * x, j = bottom + 8 * x;
+                half[o] = (byte)((src[i + b] + src[i + 4 + b] + src[j + b] + src[j + 4 + b] + 2) >> 2);
+                half[o + 1] = (byte)((src[i + 1] + src[i + 5] + src[j + 1] + src[j + 5] + 2) >> 2);
+                half[o + 2] = (byte)((src[i + r] + src[i + 4 + r] + src[j + r] + src[j + 4 + r] + 2) >> 2);
+            }
+        }
+        var bitmap = BitmapSource.Create(w, h, 96, 96, PixelFormats.Bgr32, null, half, w * 4);
+        bitmap.Freeze();
+        pool.Return(half);
+        return bitmap;
+    }
+
+    private static BitmapSource Halved(BitmapSource bitmap)
+    {
+        var half = new TransformedBitmap(bitmap, new ScaleTransform(0.5, 0.5));
+        half.Freeze();
+        return half;
     }
 
     private static BitmapSource ToBitmap(Frame frame)

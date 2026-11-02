@@ -1,160 +1,666 @@
 <Window x:Class="Tartarus.App.ControlWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Tartarus Solver" Width="520" SizeToContent="Height" MinHeight="300"
-        Topmost="True" ResizeMode="CanMinimize" FontFamily="Segoe UI" FontSize="12"
-        Background="#1E1F24" Foreground="#E8E8EC">
+        xmlns:presentation="clr-namespace:Tartarus.App.Presentation"
+        Title="Tartarus Solver" Icon="Assets/gugugaga.ico" Width="700" SizeToContent="Height" MinHeight="300"
+        MaxHeight="{Binding Height, Source={x:Static SystemParameters.WorkArea}}"
+        Topmost="False" ResizeMode="CanMinimize"
+        FontFamily="Microsoft YaHei UI" FontSize="12"
+        Background="#F4F5F7" Foreground="#1F2329"
+        UseLayoutRounding="True" SnapsToDevicePixels="True">
+
   <Window.Resources>
-    <Style TargetType="Button">
-      <Setter Property="Padding" Value="8,3" />
-      <Setter Property="Margin" Value="0,0,6,0" />
-    </Style>
-    <Style TargetType="CheckBox">
-      <Setter Property="Foreground" Value="#E8E8EC" />
-      <Setter Property="Margin" Value="0,0,12,0" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
+    <!-- The light palette of the mockup (design/control-window-mockup.html). -->
+    <SolidColorBrush x:Key="Line" Color="#E6E8EC" />
+    <SolidColorBrush x:Key="Sub" Color="#8A919C" />
+    <SolidColorBrush x:Key="Accent" Color="#2F6FDE" />
+    <SolidColorBrush x:Key="AccentSoft" Color="#EAF1FD" />
+    <SolidColorBrush x:Key="Good" Color="#17936B" />
+    <SolidColorBrush x:Key="Chroma" Color="#D24FB2" />
+    <!-- Format the existing status text without changing its producers or event handlers. -->
+    <presentation:DisplayTextConverter x:Key="RunCountDisplay" Pattern="^对局：(\d+)" Fallback="0" />
+    <presentation:DisplayTextConverter x:Key="ChromaticCountDisplay" Pattern="绮彩：(\d+)" Fallback="0" />
+    <presentation:DisplayTextConverter x:Key="PerRunDisplay" Pattern="每局 ([^）]+)" Fallback="—" />
+    <presentation:DisplayTextConverter x:Key="SinceDisplay" Pattern="^(自 .+? 起)" />
+    <presentation:DisplayTextConverter x:Key="VersionDisplay" Pattern="^(版本 \d+\.\d+\.\d+)" />
+    <presentation:DisplayTextConverter x:Key="LogPathDisplay" Pattern="^(.*?)(?:（(?:手动选择|自动找到)）)?$" />
+    <presentation:DisplayTextConverter x:Key="LogSourceDisplay" Pattern="(（(?:手动选择|自动找到)）)$" />
+
+    <!-- Text -->
     <Style TargetType="TextBlock">
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style x:Key="Section" TargetType="TextBlock">
-      <Setter Property="Foreground" Value="#9AA0AC" />
+      <Setter Property="FontSize" Value="13" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,10,0,4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
-    <Style x:Key="LabelBox" TargetType="TextBox">
-      <Setter Property="Margin" Value="4,1,10,1" />
-      <Setter Property="MinWidth" Value="40" />
+    <Style x:Key="Muted" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Sub}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="Path" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Consolas" />
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Foreground" Value="{StaticResource Sub}" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style x:Key="StatValue" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="Consolas" />
+      <Setter Property="FontSize" Value="22" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Cards -->
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="#FFFFFF" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="14,12" />
+    </Style>
+
+    <!-- Buttons -->
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="#2C3139" />
+      <Setter Property="Padding" Value="12,4" />
+      <Setter Property="Margin" Value="0,0,7,0" />
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="B" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                    CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="B" Property="Background" Value="#F2F4F7" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="B" Property="Background" Value="#E9ECF0" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="B" Property="Background" Value="#F4F5F7" />
+                <Setter Property="Foreground" Value="{StaticResource Sub}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="BtnPri" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="B" Background="{StaticResource Accent}" BorderBrush="{StaticResource Accent}"
+                    BorderThickness="1" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="B" Property="Background" Value="#285FC2" />
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="B" Property="Background" Value="#23549F" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="B" Property="Background" Value="#9CB8ED" />
+                <Setter TargetName="B" Property="BorderBrush" Value="#9CB8ED" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="BtnSm" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="FontSize" Value="11.5" />
+      <Setter Property="Padding" Value="9,1" />
+      <Setter Property="MinHeight" Value="20" />
+    </Style>
+
+    <!-- Checkboxes are switches (the mockup's .sw), their text to the right. -->
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#1F2329" />
+      <Setter Property="Margin" Value="0,0,14,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <StackPanel Orientation="Horizontal" Background="Transparent">
+              <Border x:Name="Track" Width="34" Height="18" CornerRadius="9" Background="#CFD3DA" VerticalAlignment="Center">
+                <Border x:Name="Knob" Width="14" Height="14" CornerRadius="7" Background="White"
+                        HorizontalAlignment="Left" VerticalAlignment="Center" Margin="2,0,0,0" />
+              </Border>
+              <ContentPresenter x:Name="Label" Margin="7,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Track" Property="Background" Value="{StaticResource Accent}" />
+                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0" />
+              </Trigger>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Track" Property="Opacity" Value="0.85" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Label" Property="Opacity" Value="0.45" />
+                <Setter TargetName="Track" Property="Opacity" Value="0.45" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Sliders: a thin track, a round accent thumb. -->
+    <Style x:Key="SliderFill" TargetType="RepeatButton">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RepeatButton">
+            <Grid Background="Transparent">
+              <Border Height="4" CornerRadius="2" Background="{StaticResource Accent}" VerticalAlignment="Center" />
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SliderRest" TargetType="RepeatButton">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RepeatButton">
+            <Border Background="Transparent" />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="SliderThumb" TargetType="Thumb">
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Thumb">
+            <Grid Background="Transparent">
+              <Border Width="14" Height="14" CornerRadius="7" Background="{StaticResource Accent}"
+                      BorderBrush="White" BorderThickness="2" />
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="Slider">
+      <Setter Property="Height" Value="18" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Slider">
+            <Grid>
+              <Border Height="4" CornerRadius="2" Background="#DDE1E7" VerticalAlignment="Center" />
+              <Track x:Name="PART_Track" Orientation="Horizontal">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="Slider.DecreaseLarge" Style="{StaticResource SliderFill}" />
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="Slider.IncreaseLarge" Style="{StaticResource SliderRest}" />
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Style="{StaticResource SliderThumb}" />
+                </Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Combo boxes -->
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBoxItem">
+            <Border x:Name="B" Background="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="B" Property="Background" Value="#F2F4F7" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="B" Property="Background" Value="{StaticResource AccentSoft}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Foreground" Value="#1F2329" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ComboBox">
+            <Grid>
+              <ToggleButton x:Name="Toggle" Focusable="False" ClickMode="Press"
+                            IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                <ToggleButton.Template>
+                  <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="B" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6">
+                      <Path HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,9,0"
+                            Data="M 0 0 L 4 4 L 8 0" Stroke="#8A919C" StrokeThickness="1.4" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="B" Property="Background" Value="#F2F4F7" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </ToggleButton.Template>
+              </ToggleButton>
+              <ContentPresenter x:Name="Shown" IsHitTestVisible="False" Margin="9,0,26,0" VerticalAlignment="Center"
+                                ClipToBounds="True"
+                                Content="{TemplateBinding SelectionBoxItem}"
+                                ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}">
+                <ContentPresenter.Resources>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                  </Style>
+                </ContentPresenter.Resources>
+              </ContentPresenter>
+              <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" PopupAnimation="Fade"
+                     IsOpen="{TemplateBinding IsDropDownOpen}">
+                <Border Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="6"
+                        Margin="0,2,0,0" MinWidth="{TemplateBinding ActualWidth}"
+                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsPresenter />
+                  </ScrollViewer>
+                </Border>
+              </Popup>
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="Shown" Property="Opacity" Value="0.45" />
+                <Setter TargetName="Toggle" Property="Opacity" Value="0.6" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Text boxes -->
+    <Style TargetType="TextBox">
+      <Setter Property="Height" Value="28" />
+      <Setter Property="Padding" Value="6,2" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Center" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <Style x:Key="LabelBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="Margin" Value="0,0,0,0" />
+    </Style>
+    <Style x:Key="DarkBox" TargetType="TextBox">
+      <Setter Property="IsReadOnly" Value="True" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="FontFamily" Value="Consolas" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Background" Value="#15161A" />
+      <Setter Property="Foreground" Value="#D8D8DC" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="VerticalContentAlignment" Value="Top" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+              <ScrollViewer x:Name="PART_ContentHost" VerticalAlignment="Top" />
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- The log list: dark, no selection tint -->
+    <Style TargetType="ListBoxItem">
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <ContentPresenter />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
   </Window.Resources>
-  <StackPanel Margin="10">
-    <!-- Target window and capture -->
-    <TextBlock Style="{StaticResource Section}" Margin="0,0,0,4" Text="游戏窗口" />
-    <DockPanel>
-      <Button x:Name="RefreshButton" DockPanel.Dock="Right" Margin="6,0,0,0" Content="⟳" ToolTip="刷新窗口列表" Click="RefreshButton_Click" />
-      <ComboBox x:Name="WindowCombo" />
-    </DockPanel>
-    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-      <Button x:Name="CaptureButton" Content="开始捕获 ▶" Click="CaptureButton_Click" />
-      <CheckBox x:Name="AutoAttachCheck" Content="自动连接游戏" IsChecked="True" />
-    </StackPanel>
-    <TextBlock x:Name="CaptureStatus" Margin="0,4,0,0" Foreground="#9AA0AC" TextWrapping="Wrap" Text="未在捕获" />
 
-    <!-- Scanning -->
-    <TextBlock Style="{StaticResource Section}" Text="识别" />
-    <StackPanel Orientation="Horizontal">
-      <Button x:Name="ScanButton" Content="扫描" Click="ScanButton_Click" />
-      <CheckBox x:Name="AutoScanCheck" Content="自动" Margin="0,0,4,0" Checked="AutoScanCheck_Changed" Unchecked="AutoScanCheck_Changed" />
-      <Slider x:Name="IntervalSlider" Width="140" Minimum="0" Maximum="1" SmallChange="0.1" LargeChange="0.1" IsSnapToTickEnabled="True" TickFrequency="0.1" TickPlacement="BottomRight"
-              ValueChanged="IntervalSlider_ValueChanged" ToolTip="两帧之间的间隔秒数；0：上一帧识别和提示完成后立即处理下一帧" />
-      <TextBlock x:Name="IntervalText" Margin="6,0,0,0" Text="0.5 秒" />
-    </StackPanel>
-    <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
-                ToolTip="游戏显示文字所用的语言，程序据此识别游戏文字。与本程序的界面语言无关。">
-      <TextBlock Text="游戏语言" Margin="0,0,6,0" />
-      <ComboBox x:Name="GameLanguageCombo" Width="230" />
-      <CheckBox x:Name="GameLanguageAutoCheck" Content="自动检测" Margin="10,0,0,0"
-                ToolTip="从游戏的设置文件读取语言；关闭后在列表中手动选择" />
-    </StackPanel>
-    <StackPanel x:Name="ViewPanel" Orientation="Horizontal" Margin="0,6,0,0">
-      <CheckBox x:Name="OverlayCheck" Content="叠加层" Checked="OverlayCheck_Changed" Unchecked="OverlayCheck_Changed" />
-      <CheckBox x:Name="BoxesCheck" Content="可交互区域" ToolTip="框出所有可点击的位置：格子、卡牌、按钮、刑具槽和绮彩槽、选择卡" Checked="BoxesCheck_Changed" Unchecked="BoxesCheck_Changed" />
-      <CheckBox x:Name="TextCheck" Content="文字" ToolTip="在叠加层上显示 OCR 区域和识别出的文字" Checked="TextCheck_Changed" Unchecked="TextCheck_Changed" />
-    </StackPanel>
-    <TextBlock x:Name="ScanStatus" Margin="0,4,0,0" Foreground="#9AA0AC" TextWrapping="Wrap" Text="—" />
-
-    <!-- Move hints -->
-    <StackPanel>
-      <TextBlock Style="{StaticResource Section}" Text="提示" />
-      <StackPanel x:Name="HintChecks" Orientation="Horizontal">
-        <CheckBox x:Name="HintsCheck" Content="走法提示" Checked="HintsCheck_Changed" Unchecked="HintsCheck_Changed" />
-        <CheckBox x:Name="HintsOnlyCheck" Content="仅显示提示" Margin="12,0,12,0" Checked="HintsOnlyCheck_Changed" Unchecked="HintsOnlyCheck_Changed" ToolTip="叠加层只显示走法框和提示行：不显示格子、刑具和绮彩" />
-      </StackPanel>
-      <DockPanel Margin="0,6,0,0">
-        <TextBlock DockPanel.Dock="Left" Text="更快" Foreground="#9AA0AC" Margin="0,0,6,0" />
-        <TextBlock DockPanel.Dock="Right" Text="更强" Foreground="#9AA0AC" Margin="6,0,0,0" />
-        <Slider x:Name="HintSlider" Minimum="0" Maximum="6" IsSnapToTickEnabled="True" TickFrequency="1" TickPlacement="BottomRight" ValueChanged="HintSlider_ValueChanged" ToolTip="每步的模拟次数：越多计算越久，提示越强" />
-      </DockPanel>
-      <TextBlock x:Name="HintLevelText" Margin="0,2,0,0" TextWrapping="Wrap" Text="—" />
-      <TextBlock x:Name="HintStatus" Margin="0,2,0,0" Foreground="#9AA0AC" TextWrapping="Wrap" Text="—" />
-    </StackPanel>
-
-    <!-- The game's log -->
-    <TextBlock Style="{StaticResource Section}" Text="游戏日志" />
-    <StackPanel Orientation="Horizontal">
-      <Button x:Name="PickLogButton" Content="选择…" ToolTip="手动选择 UE_game.log：游戏目录\UE_game\TorchLight\Saved\Logs" Click="PickLogButton_Click" />
-      <Button x:Name="AutoLogButton" Content="自动" ToolTip="自动查找日志：在运行中的游戏旁、Steam 库和启动器设置中查找" Click="AutoLogButton_Click" />
-    </StackPanel>
-    <TextBlock x:Name="LogStatus" Margin="0,2,0,0" Foreground="#9AA0AC" TextWrapping="Wrap" Text="—" />
-
-    <!-- Statistics -->
-    <TextBlock Style="{StaticResource Section}" Text="统计" />
-    <DockPanel>
-      <Button x:Name="ResetStatsButton" DockPanel.Dock="Right" Margin="6,0,0,0" VerticalAlignment="Center" Content="重置" ToolTip="清空统计，从现在起重新计数" Click="ResetStatsButton_Click" />
-      <TextBlock x:Name="StatsText" TextWrapping="Wrap" Text="—" />
-    </DockPanel>
-
-    <!-- Debugging (the command line's debug flag): labels, dataset, what was read, the log -->
-    <StackPanel x:Name="DebugPanel">
-      <TextBlock Style="{StaticResource Section}" Text="标注与数据集" />
+  <DockPanel>
+    <!-- Title strip: the app's name and version (the window's Title also says the debug flag). -->
+    <Border DockPanel.Dock="Top" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="14,10">
       <StackPanel Orientation="Horizontal">
-        <CheckBox x:Name="EditCheck" Content="编辑模式" Checked="EditCheck_Changed" Unchecked="EditCheck_Changed" />
-        <Button x:Name="SaveButton" Content="保存帧" Click="SaveButton_Click" />
-        <CheckBox x:Name="AutoCollectCheck" Content="自动收集" Margin="6,0,0,0" ToolTip="棋盘识别结果变化时自动把帧存入数据集（需开启自动扫描）" Checked="AutoCollectCheck_Changed" Unchecked="AutoCollectCheck_Changed" />
+        <Border Width="30" Height="30" CornerRadius="8">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+              <GradientStop Color="#D24FB2" Offset="0" />
+              <GradientStop Color="#2F6FDE" Offset="1" />
+            </LinearGradientBrush>
+          </Border.Background>
+          <TextBlock Text="T" Foreground="White" FontSize="15" FontWeight="Bold"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Margin="10,0,0,0" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                   Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" />
       </StackPanel>
-      <Grid Margin="0,6,0,0">
+    </Border>
+
+    <!-- Footer: updates and the version, bug reports -->
+    <Border DockPanel.Dock="Bottom" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="14,8">
+      <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
-          <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-          <RowDefinition />
-          <RowDefinition />
-          <RowDefinition />
-        </Grid.RowDefinitions>
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="典狱长" />
-        <TextBox Grid.Row="0" Grid.Column="1" x:Name="WardenBox" Style="{StaticResource LabelBox}" ToolTip="典狱长所在格，1-16" />
-        <TextBlock Grid.Row="0" Grid.Column="2" Text="剩余天数" />
-        <TextBox Grid.Row="0" Grid.Column="3" x:Name="DaysBox" Style="{StaticResource LabelBox}" />
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="目的地" />
-        <TextBox Grid.Row="1" Grid.Column="1" x:Name="DestinationsBox" Style="{StaticResource LabelBox}" ToolTip="目的地卡上的格子，从左到右：9,11,12" />
-        <TextBlock Grid.Row="1" Grid.Column="2" Text="绮彩" />
-        <TextBox Grid.Row="1" Grid.Column="3" x:Name="ChromaticBox" Style="{StaticResource LabelBox}" />
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="刑具" />
-        <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" x:Name="InstrumentsBox" Style="{StaticResource LabelBox}" ToolTip="id，逗号分隔：ironbox,muzzle" />
+        <StackPanel Grid.Column="2" Orientation="Horizontal">
+          <Button x:Name="UpdateButton" Style="{StaticResource BtnPri}" Visibility="Collapsed" Click="UpdateButton_Click" />
+          <Button x:Name="ReportButton" Content="报告问题" Margin="0" Click="ReportButton_Click"
+                  ToolTip="把截图、程序日志和本局游戏日志连同你的说明发送给开发者" />
+        </StackPanel>
+        <StackPanel x:Name="UpdatePanel" Orientation="Horizontal" VerticalAlignment="Center">
+          <CheckBox x:Name="UpdateCheck" Content="检查更新" ToolTip="启动时及每 6 小时向 GitHub 查询新版本"
+                    Checked="UpdateCheck_Changed" Unchecked="UpdateCheck_Changed" />
+        </StackPanel>
+        <TextBlock x:Name="VersionText" Visibility="Collapsed" Text="版本" />
+        <TextBlock Grid.Column="1" Style="{StaticResource Muted}" Margin="4,0,10,0"
+                   Text="{Binding Text, ElementName=VersionText, Converter={StaticResource VersionDisplay}, Mode=OneWay}"
+                   ToolTip="{Binding ToolTip, ElementName=VersionText}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
       </Grid>
-      <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-        <Button x:Name="ApplyLabelsButton" Content="应用字段" Click="ApplyLabelsButton_Click" />
-        <Button x:Name="ResetLabelsButton" Content="撤销编辑" Click="ResetLabelsButton_Click" />
-        <Button x:Name="OpenDatasetButton" Content="数据集文件夹" Click="OpenDatasetButton_Click" />
-      </StackPanel>
-      <TextBlock x:Name="DatasetStatus" Margin="0,4,0,0" Foreground="#9AA0AC" TextWrapping="Wrap" />
-      <TextBlock Margin="0,4,0,0" Foreground="#6F7580" TextWrapping="Wrap"
-                 Text="编辑模式下在叠加层上点击格子：弹出代号、稀有度和标记菜单。编辑时自动扫描暂停。" />
+    </Border>
 
-      <!-- Sandbox summary and log -->
-      <TextBlock Style="{StaticResource Section}" Text="棋盘" />
-      <TextBox x:Name="SandboxSummary" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11"
-               Background="#15161A" Foreground="#D8D8DC" BorderThickness="0" MinHeight="48" />
-      <TextBlock Style="{StaticResource Section}" Text="日志" />
-      <ListBox x:Name="LogList" Height="120" FontFamily="Consolas" FontSize="11" Background="#15161A" Foreground="#C8C8CC" BorderThickness="0"
-               ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-        <ListBox.ItemTemplate>
-          <DataTemplate>
-            <TextBlock Text="{Binding}" TextWrapping="Wrap" />
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
-    </StackPanel>
-    <DockPanel x:Name="UpdatePanel" Margin="0,8,0,0">
-      <Button x:Name="UpdateButton" DockPanel.Dock="Right" Margin="6,0,0,0" Visibility="Collapsed" Click="UpdateButton_Click" />
-      <CheckBox x:Name="UpdateCheck" Content="检查更新" ToolTip="启动时及每 6 小时向 GitHub 查询新版本" Checked="UpdateCheck_Changed" Unchecked="UpdateCheck_Changed" />
-    </DockPanel>
-    <DockPanel Margin="0,8,0,0">
-      <Button x:Name="ReportButton" DockPanel.Dock="Right" Margin="6,0,0,0" Content="报告问题" ToolTip="把截图、程序日志和本局游戏日志连同你的说明发送给开发者" Click="ReportButton_Click" />
-      <TextBlock x:Name="VersionText" Foreground="#6F7580" TextWrapping="Wrap" Text="版本" />
-    </DockPanel>
-  </StackPanel>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,12,0,0">
+      <StackPanel Margin="14,0,14,14">
+
+        <!-- Statistics -->
+        <Border Style="{StaticResource Card}">
+          <StackPanel>
+            <!-- Keep the existing code-behind's statistics output as the binding source. -->
+            <TextBlock x:Name="StatsText" Visibility="Collapsed" />
+            <DockPanel>
+              <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <TextBlock x:Name="StatsSince" Style="{StaticResource Muted}"
+                           Text="{Binding ToolTip, ElementName=StatsText, Converter={StaticResource SinceDisplay}, Mode=OneWay}"
+                           ToolTip="{Binding ToolTip, ElementName=StatsText}" />
+                <Button x:Name="ResetStatsButton" Style="{StaticResource BtnSm}" Margin="8,0,0,0" Content="重置"
+                        ToolTip="清空统计，从现在起重新计数" Click="ResetStatsButton_Click" />
+              </StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="统计" />
+            </DockPanel>
+            <Grid Margin="0,8,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <StackPanel Grid.Column="0">
+                <TextBlock Style="{StaticResource Muted}" Foreground="{StaticResource Sub}" Text="对局" />
+                <TextBlock x:Name="StatsRuns" Style="{StaticResource StatValue}"
+                           Text="{Binding Text, ElementName=StatsText, Converter={StaticResource RunCountDisplay}, Mode=OneWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Style="{StaticResource Muted}" Foreground="{StaticResource Sub}" Text="绮彩" />
+                <TextBlock x:Name="StatsChromatic" Style="{StaticResource StatValue}" Foreground="{StaticResource Chroma}"
+                           Text="{Binding Text, ElementName=StatsText, Converter={StaticResource ChromaticCountDisplay}, Mode=OneWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2">
+                <TextBlock Style="{StaticResource Muted}" Foreground="{StaticResource Sub}" Text="每局绮彩" />
+                <StackPanel Orientation="Horizontal">
+                  <TextBlock x:Name="StatsPerRun" Style="{StaticResource StatValue}" Foreground="{StaticResource Good}"
+                             Text="{Binding Text, ElementName=StatsText, Converter={StaticResource PerRunDisplay}, Mode=OneWay}" />
+                  <TextBlock Style="{StaticResource Muted}" Margin="4,0,0,0" Text="个/局" />
+                </StackPanel>
+              </StackPanel>
+            </Grid>
+            <TextBlock x:Name="StatsNote" Margin="0,6,0,0" Text="{Binding Text, ElementName=StatsText}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Text, ElementName=StatsText}" Value="暂无对局：游戏日志记录到一局从开始到暴乱的全过程后才计入">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </StackPanel>
+        </Border>
+
+        <!-- The game window and its log -->
+        <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="12" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <Border Grid.Column="0" Style="{StaticResource Card}">
+            <StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="游戏窗口" Margin="0,0,0,8" />
+              <DockPanel>
+                <Button x:Name="RefreshButton" DockPanel.Dock="Right" Content="⟳" Margin="6,0,0,0" Padding="10,3"
+                        ToolTip="刷新窗口列表" Click="RefreshButton_Click" />
+                <ComboBox x:Name="WindowCombo" />
+              </DockPanel>
+              <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <Button x:Name="CaptureButton" Style="{StaticResource BtnPri}" Content="开始捕获 ▶" Click="CaptureButton_Click" />
+                <CheckBox x:Name="AutoAttachCheck" Content="自动连接游戏" IsChecked="True" Margin="4,0,0,0" />
+              </StackPanel>
+              <TextBlock x:Name="CaptureStatus" Style="{StaticResource Muted}" Margin="0,6,0,0"
+                         TextWrapping="Wrap" Text="未在捕获" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="2" Style="{StaticResource Card}">
+            <StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="游戏日志" Margin="0,0,0,8" />
+              <StackPanel Orientation="Horizontal">
+                <Button x:Name="PickLogButton" Content="选择…" Click="PickLogButton_Click"
+                        ToolTip="手动选择 UE_game.log：游戏目录\UE_game\TorchLight\Saved\Logs" />
+                <Button x:Name="AutoLogButton" Content="自动" Margin="0" Click="AutoLogButton_Click"
+                        ToolTip="自动查找日志：在运行中的游戏旁、Steam 库和启动器设置中查找" />
+              </StackPanel>
+              <TextBlock x:Name="LogStatus" Visibility="Collapsed" Text="—" />
+              <TextBlock Style="{StaticResource Path}" Margin="0,10,0,0"
+                         Text="{Binding Text, ElementName=LogStatus, Converter={StaticResource LogPathDisplay}, Mode=OneWay}"
+                         ToolTip="{Binding Text, ElementName=LogStatus}" />
+              <TextBlock Style="{StaticResource Muted}"
+                         Text="{Binding Text, ElementName=LogStatus, Converter={StaticResource LogSourceDisplay}, Mode=OneWay}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Scanning -->
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Section}" Text="识别" Margin="0,0,0,8" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Button x:Name="ScanButton" Style="{StaticResource BtnPri}" Content="扫描" Click="ScanButton_Click" />
+              <Grid Grid.Column="1" Margin="4,0,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" MinWidth="64" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <CheckBox x:Name="AutoScanCheck" Content="自动" Margin="0,0,6,0"
+                          Checked="AutoScanCheck_Changed" Unchecked="AutoScanCheck_Changed" />
+                <Slider Grid.Column="1" x:Name="IntervalSlider" Minimum="0" Maximum="1" SmallChange="0.1" LargeChange="0.1"
+                        IsSnapToTickEnabled="True" TickFrequency="0.1"
+                        ValueChanged="IntervalSlider_ValueChanged"
+                        ToolTip="两帧之间的间隔秒数；0：上一帧识别和提示完成后立即处理下一帧" />
+                <TextBlock Grid.Column="2" x:Name="IntervalText" FontFamily="Consolas" MaxWidth="110"
+                           TextWrapping="Wrap" Margin="8,0,0,0" Text="0.5 秒" />
+              </Grid>
+            </Grid>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                        ToolTip="游戏显示文字所用的语言，程序据此识别游戏文字。与本程序的界面语言无关。">
+              <TextBlock Text="游戏语言" Margin="0,0,8,0" />
+              <ComboBox x:Name="GameLanguageCombo" Width="250" />
+              <CheckBox x:Name="GameLanguageAutoCheck" Content="自动检测" Margin="12,0,0,0"
+                        ToolTip="从游戏的设置文件中读取语言；在列表中选择语言会关闭自动检测" />
+            </StackPanel>
+            <TextBlock x:Name="ScanStatus" Style="{StaticResource Muted}" Margin="0,8,0,0" Text="—" />
+          </StackPanel>
+        </Border>
+
+        <!-- Hints -->
+        <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+          <StackPanel>
+            <TextBlock Style="{StaticResource Section}" Text="提示" Margin="0,0,0,6" />
+            <DockPanel ToolTip="每步的模拟次数：越多计算越久，提示越强">
+              <TextBlock DockPanel.Dock="Left" Text="更快" Foreground="{StaticResource Sub}" Margin="0,0,8,0" />
+              <TextBlock DockPanel.Dock="Right" Text="更强" Foreground="{StaticResource Sub}" Margin="8,0,0,0" />
+              <Slider x:Name="HintSlider" Minimum="0" Maximum="6" IsSnapToTickEnabled="True" TickFrequency="1"
+                      ValueChanged="HintSlider_ValueChanged" />
+            </DockPanel>
+            <TextBlock x:Name="HintLevelText" Margin="0,6,0,0" TextWrapping="Wrap" Text="—" />
+            <TextBlock x:Name="HintStatus" Style="{StaticResource Muted}" Margin="0,2,0,0" Text="—" />
+          </StackPanel>
+        </Border>
+
+        <!-- Debugging (the command line's debug flag): what the overlay shows, labels, dataset, what was read, the log -->
+        <StackPanel x:Name="DebugPanel" Margin="0,14,0,0">
+          <DockPanel Margin="0,0,0,10">
+            <TextBlock Text="调试（--debug）" Foreground="#A0661A" FontSize="12" VerticalAlignment="Center" />
+            <Line Margin="8,0,0,0" X2="1" Stretch="Fill" VerticalAlignment="Center"
+                  Stroke="#E3C79A" StrokeThickness="1" StrokeDashArray="4,3" />
+          </DockPanel>
+
+          <Border Style="{StaticResource Card}">
+            <StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="显示" Margin="0,0,0,8" />
+              <WrapPanel x:Name="ViewPanel">
+                <CheckBox x:Name="OverlayCheck" Content="叠加层" Margin="0,0,14,6"
+                          Checked="OverlayCheck_Changed" Unchecked="OverlayCheck_Changed" />
+                <CheckBox x:Name="BoxesCheck" Content="可交互区域" Margin="0,0,14,6"
+                          ToolTip="框出所有可点击的位置：格子、卡牌、按钮、刑具槽和绮彩槽、选择卡"
+                          Checked="BoxesCheck_Changed" Unchecked="BoxesCheck_Changed" />
+                <CheckBox x:Name="TextCheck" Content="文字" Margin="0,0,14,6"
+                          ToolTip="在叠加层上显示 OCR 区域和识别出的文字"
+                          Checked="TextCheck_Changed" Unchecked="TextCheck_Changed" />
+                <WrapPanel x:Name="HintChecks">
+                  <CheckBox x:Name="HintsCheck" Content="走法提示" Margin="0,0,14,6"
+                            Checked="HintsCheck_Changed" Unchecked="HintsCheck_Changed" />
+                  <CheckBox x:Name="HintsOnlyCheck" Content="仅显示提示" Margin="0,0,14,6"
+                            ToolTip="叠加层只显示走法框和提示行：不显示格子、刑具和绮彩"
+                            Checked="HintsOnlyCheck_Changed" Unchecked="HintsOnlyCheck_Changed" />
+                </WrapPanel>
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+            <StackPanel>
+              <TextBlock Style="{StaticResource Section}" Text="标注与数据集" Margin="0,0,0,8" />
+              <StackPanel Orientation="Horizontal">
+                <CheckBox x:Name="EditCheck" Content="编辑模式" Margin="0,0,10,0"
+                          Checked="EditCheck_Changed" Unchecked="EditCheck_Changed" />
+                <Button x:Name="SaveButton" Content="保存帧" Click="SaveButton_Click" />
+                <CheckBox x:Name="AutoCollectCheck" Content="自动收集" Margin="2,0,0,0"
+                          ToolTip="棋盘识别结果变化时自动把帧存入数据集（需开启自动扫描）"
+                          Checked="AutoCollectCheck_Changed" Unchecked="AutoCollectCheck_Changed" />
+              </StackPanel>
+              <Grid Margin="0,10,0,0">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="10" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition />
+                  <RowDefinition Height="6" />
+                  <RowDefinition />
+                  <RowDefinition Height="6" />
+                  <RowDefinition />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="典狱长" Margin="0,0,8,0" />
+                <TextBox Grid.Row="0" Grid.Column="1" x:Name="WardenBox" Style="{StaticResource LabelBox}" ToolTip="典狱长所在格，1-16" />
+                <TextBlock Grid.Row="0" Grid.Column="3" Text="剩余天数" Margin="0,0,8,0" />
+                <TextBox Grid.Row="0" Grid.Column="4" x:Name="DaysBox" Style="{StaticResource LabelBox}" />
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="目的地" Margin="0,0,8,0" />
+                <TextBox Grid.Row="2" Grid.Column="1" x:Name="DestinationsBox" Style="{StaticResource LabelBox}" ToolTip="目的地卡上的格子，从左到右：9,11,12" />
+                <TextBlock Grid.Row="2" Grid.Column="3" Text="绮彩" Margin="0,0,8,0" />
+                <TextBox Grid.Row="2" Grid.Column="4" x:Name="ChromaticBox" Style="{StaticResource LabelBox}" />
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="刑具" Margin="0,0,8,0" />
+                <TextBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="4" x:Name="InstrumentsBox" Style="{StaticResource LabelBox}" ToolTip="id，逗号分隔：ironbox,muzzle" />
+              </Grid>
+              <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                <Button x:Name="ApplyLabelsButton" Content="应用字段" Click="ApplyLabelsButton_Click" />
+                <Button x:Name="ResetLabelsButton" Content="撤销编辑" Click="ResetLabelsButton_Click" />
+                <Button x:Name="OpenDatasetButton" Content="数据集文件夹" Margin="0" Click="OpenDatasetButton_Click" />
+              </StackPanel>
+              <TextBlock x:Name="DatasetStatus" Style="{StaticResource Muted}" Margin="0,8,0,0" />
+              <TextBlock Style="{StaticResource Muted}" Foreground="#6F7580" Margin="0,2,0,0"
+                         Text="编辑模式下在叠加层上点击格子：弹出代号、稀有度和标记菜单。编辑时自动扫描暂停。" />
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="12" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource Section}" Text="棋盘" Margin="0,0,0,8" />
+                <TextBox x:Name="SandboxSummary" Style="{StaticResource DarkBox}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock Style="{StaticResource Section}" Text="日志" Margin="0,0,0,8" />
+                <Border Background="#15161A" CornerRadius="6" Padding="10,8" Height="80">
+                  <ListBox x:Name="LogList" Background="Transparent" Foreground="#C8C8CC" BorderThickness="0"
+                           FontFamily="Consolas" FontSize="11" Padding="0"
+                           ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </Border>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
 </Window>

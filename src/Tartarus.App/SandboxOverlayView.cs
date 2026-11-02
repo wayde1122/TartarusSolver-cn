@@ -27,6 +27,8 @@ public sealed class OverlayModel
     public string? Status { get; set; }
     /// <summary>Something the player should do for the hint to hold, drawn large at the top.</summary>
     public string? Warning { get; init; }
+    /// <summary>Asking for the game's language, line by line in each of them: drawn in the bottom left corner, off the Sandbox.</summary>
+    public string? LanguageAsk { get; init; }
     /// <summary>The hint is the eye button: to look at the Sandbox under a pick, or to go back to the pick once it's read.</summary>
     public bool EyeHint { get; init; }
     /// <summary>Only the hint's frames and summary (and warnings): no cells, instruments, Chromatic Inmates or read text.</summary>
@@ -71,15 +73,52 @@ public sealed partial class SandboxOverlayView : FrameworkElement
     ];
 
     private OverlayModel? _model;
+    // What the last drawing showed (DrawKey), when it showed only the hint.
+    private string? _drawnKey;
 
+    /// <summary>
+    /// The model; drawn again only when what it shows differs. The overlay is a transparent window as big as the game's,
+    /// and each drawing goes through the graphics card and back whole: a scan's model with the same hint drew it again
+    /// 2-5 times a second (2026-11-01).
+    /// </summary>
     public OverlayModel? Model
     {
         get => _model;
         set
         {
+            var hintBefore = _model?.Hint;
             _model = value;
+            string? key = DrawKey(value);
+            if (key != null && key == _drawnKey && ReferenceEquals(value?.Hint, hintBefore)) return;
+            _drawnKey = key;
             InvalidateVisual();
         }
+    }
+
+    /// <summary>
+    /// What a hints-only model draws, as text: the status and warning lines, the eye button, and the boxes the hint's
+    /// frames are placed by (the cells', the cards' as read, the pick cards'); the hint itself is compared as the same
+    /// object. Null for the other views (the debug window's), drawn every time.
+    /// </summary>
+    private static string? DrawKey(OverlayModel? m)
+    {
+        if (m is not { HintsOnly: true, EditMode: false }) return null;
+        var key = new System.Text.StringBuilder();
+        key.Append(m.FrameWidth).Append('x').Append(m.FrameHeight).Append('|').Append(m.Status).Append('|').Append(m.Warning).Append('|').Append(m.LanguageAsk)
+            .Append('|').Append(m.EyeHint).Append('|').Append(m.HintLine).Append('|').Append(m.Sandbox != null);
+        var scan = m.Scan;
+        if (scan?.Layout is { } layout) key.Append("|L").Append(layout.Width).Append(',').Append(layout.Height).Append(',').Append(layout.K.ToString("0.####", CultureInfo.InvariantCulture));
+        if (m.Hint == null || scan == null) return key.ToString();
+        key.Append("|ok").Append(scan.Ok).Append(scan.Pick?.Kind);
+        if (scan.Pick is { } pick)
+            foreach (var c in pick.Cards) key.Append('|').Append(c.Index).Append(c.Id).Append('@').Append(c.X.ToString("0.#", CultureInfo.InvariantCulture));
+        if (scan.Ok && scan.Cells is { } cells)
+            foreach (var c in cells) key.Append('|').Append(c.N).Append(',').Append((int)c.X).Append(',').Append((int)c.Y).Append(',').Append((int)(c.K * 1000));
+        if (scan.Text is { } text)
+            foreach (var c in text.Cards)
+                key.Append('|').Append(c.Index).Append(c.Meaning).Append(c.DestinationCell).Append('@')
+                    .Append(c.Line.Box.X0).Append(',').Append(c.Line.Box.Y0).Append(',').Append(c.Line.Box.X1).Append(',').Append(c.Line.Box.Y1);
+        return key.ToString();
     }
 
     public static Brush RarityBrush(Rarity rarity) => RarityBrushes[Math.Clamp((int)rarity, 0, RarityBrushes.Length - 1)];
@@ -118,6 +157,7 @@ public sealed partial class SandboxOverlayView : FrameworkElement
 
         if (m.Status is { Length: > 0 } status) Pill(dc, status, new Point(8, 8), Brushes.White, 12, ppd);
         if (m.Warning is { Length: > 0 } warning) Pill(dc, warning, new Point(m.FrameWidth * sx / 2, 64), IncidentBrush, 16, ppd, centerX: true);
+        if (m.LanguageAsk is { Length: > 0 } ask) Pill(dc, ask, new Point(8, m.FrameHeight * sy - 8), IncidentBrush, 14, ppd, above: true);
 
         if (m.ShowText && !m.HintsOnly && m.Scan is { } textScan) DrawText(dc, textScan, sx, sy, ppd);
         if (m.EyeHint && m.Scan?.Layout is { } eyeLayout) DrawEyeHint(dc, eyeLayout, sx, sy);

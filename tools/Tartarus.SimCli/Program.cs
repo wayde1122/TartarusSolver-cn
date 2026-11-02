@@ -74,8 +74,8 @@ int Fail(string message)
 
 string? Opt(string name) => Array.IndexOf(args, name) is int i and >= 0 && i + 1 < args.Length ? args[i + 1] : null;
 
-// Rules R: "fewer=P;replace=w0,w1,w2,w3,w4" over the base: P % of mornings one Destination short, the Replace rarity weights
-// (Normal .. Ultimate); "default" the rules as shipped.
+// Rules R: "fewer=P;replace=w0,w1,w2,w3,w4;noose=w0,..,w4" over the base: P % of mornings one Destination short, the Replace
+// rarity weights (Normal .. Ultimate), those with Hangman's Noose held; "default" the rules as shipped.
 RuleOptions Rules(string? spec, RuleOptions over)
 {
     if (spec is null or "default") return over;
@@ -86,6 +86,7 @@ RuleOptions Rules(string? spec, RuleOptions over)
         {
             "fewer" => over with { FewerDestinationsPercent = double.Parse(kv[1], CultureInfo.InvariantCulture) },
             "replace" => over with { ReplaceWeights = kv[1].Split(',').Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray() },
+            "noose" => over with { NooseReplaceWeights = kv[1].Split(',').Select(x => double.Parse(x, CultureInfo.InvariantCulture)).ToArray() },
             // theme=ironlaw (none, tyranny, opulence, cagefight): every run of that theme.
             "theme" => over with { Theme = Enum.Parse<Theme>(kv[1], ignoreCase: true) },
             _ => throw new ArgumentException($"unknown rule {kv[0]}"),
@@ -99,6 +100,8 @@ IPolicy MakePolicy(ulong seed, string? spec = null, ValueNet? net = null, EvalWe
 {
     var searchEngine = rules ?? engine;
     string p = spec ?? Opt("--policy") ?? "random";
+    // A last ":nolog": the game read as a log of pages only was before 0.7.33, a Warden's Inmate with no target taken for a used Consume.
+    if (p.EndsWith(":nolog", StringComparison.Ordinal)) return new NoTargetIsUsed(MakePolicy(seed, p[..^6], net, w, policy, instruments, rules));
     net ??= valueNet;
     var weights = w ?? globalWeights;
     if (p.StartsWith("mc:", StringComparison.Ordinal)) return new SearchPolicy(searchEngine, int.Parse(p[3..]), weights, threads: 1);
@@ -464,4 +467,16 @@ int Bench()
     double secs = sw.Elapsed.TotalSeconds;
     Console.WriteLine($"{runs} random runs in {secs:0.0} s: {runs / secs:0} runs/s, {decisions / secs / 1e6:0.00} M decisions/s, {decisions / (double)runs:0.0} decisions per run (one thread)");
     return 0;
+}
+
+/// <summary>The search told the day's Consume is used whenever the Warden's Inmate has no target to eat.</summary>
+sealed class NoTargetIsUsed(IPolicy inner) : IPolicy
+{
+    public GameAction Choose(Engine engine, in GameState s, ReadOnlySpan<GameAction> legal)
+    {
+        if (s.Phase != Phase.Act || s.Used != DayAction.None || !s.Cells[s.Position].HasInmate || Engine.HasTarget(s, s.Position)) return inner.Choose(engine, s, legal);
+        var told = s;
+        told.Used = DayAction.Consume;
+        return inner.Choose(engine, told, legal);
+    }
 }

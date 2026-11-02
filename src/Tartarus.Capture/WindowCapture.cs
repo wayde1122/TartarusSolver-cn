@@ -51,6 +51,15 @@ public sealed unsafe class WindowCapture : IDisposable
         _session.StartCapture();
     }
 
+    /// <summary>
+    /// The capture can't work on this system, so trying again won't help. CLASS_E_CLASSNOTAVAILABLE: Windows 10 1809 has
+    /// no capture of a window by its handle (that takes 1903; 2026-11-02, a player's log of the same error every second).
+    /// </summary>
+    public static bool IsUnsupported(Exception ex) => ex is PlatformNotSupportedException || ex.HResult == unchecked((int)0x80040111);
+
+    /// <summary>Windows older than Windows 10 1903, the first to capture a window by its handle.</summary>
+    public static bool WindowsTooOld => !OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362);
+
     public IntPtr Hwnd { get; }
     public string DisplayName => _item.DisplayName;
     public long FrameCount { get; private set; }
@@ -113,8 +122,11 @@ public sealed unsafe class WindowCapture : IDisposable
         (ex is SharpGen.Runtime.SharpGenException sharp ? sharp.ResultCode.Code : ex.HResult) is
             unchecked((int)0x887A0005) or unchecked((int)0x887A0006) or unchecked((int)0x887A0007) or unchecked((int)0x887A0020);
 
-    /// <summary>Copies the latest frame to a CPU buffer (BGRA). Null until the first frame arrives.</summary>
-    public Frame? Grab()
+    /// <summary>
+    /// Copies the latest frame to a CPU buffer (BGRA), from <paramref name="pool"/> if given. Null until the first frame
+    /// arrives.
+    /// </summary>
+    public Frame? Grab(PixelPool? pool = null)
     {
         lock (_lock)
         {
@@ -163,7 +175,7 @@ public sealed unsafe class WindowCapture : IDisposable
             var map = _context.Map(_staging, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
             try
             {
-                var pixels = new byte[w * h * 4];
+                var pixels = pool?.Rent(w * h * 4) ?? new byte[w * h * 4];
                 int row = w * 4;
                 fixed (byte* dst = pixels)
                 {
