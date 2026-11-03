@@ -25,23 +25,23 @@ MODELS = [
     "text/tartarus_text.json",
 ]
 
-HOWTO = """Tartarus Solver {version}
+HOWTO = """Tartarus Solver {version}（中文版）
 
-Hints for Tartarus Prison in Torchlight: Infinite. The app only looks at the game's window and reads its log file;
-it never touches the game's memory and never presses anything in the game.
+为《火炬之光：无限》的塔罗斯监狱提供走法提示。程序只捕获游戏窗口并读取游戏日志，
+不读写游戏内存，不代替玩家按键或点击。
 
-Start: run TartarusSolver.exe, then the game. The app finds the game's window and its log by itself.
+使用：解压整个压缩包，运行 TartarusSolver.exe，然后启动游戏。程序会自动寻找游戏窗口和日志。
 {runtime}
-Hotkeys (while the game or the app is in front):
-  Ctrl+Shift+S  scan now            Ctrl+Shift+R  auto scan on/off
-  Ctrl+Shift+H  overlay on/off      Ctrl+Shift+B  report a bug (screenshot, the app's log, this run's game log)
+快捷键（游戏或本程序在前台时有效）：
+  Ctrl+Shift+S  立即扫描            Ctrl+Shift+R  开关自动扫描
+  Ctrl+Shift+H  开关叠加层          Ctrl+Shift+B  报告问题
 
-The hint: the best move framed bold green, as good ones thin; over it the chests the run is expected to end with.
-If something looks wrong, press Ctrl+Shift+B right away and say what you expected.
-Settings: %LOCALAPPDATA%\\TartarusSolver\\settings.json
+最佳走法以绿色粗框标出，框上显示本局预计结束时的宝箱数。
+自动检查更新已屏蔽，请手动下载新版：https://github.com/wayde1122/TartarusSolver-cn/releases
+设置：%LOCALAPPDATA%\\TartarusSolver\\settings.json
 """
-NEEDS_RUNTIME = ("\nNeeds the .NET 9 Desktop Runtime (x64): https://dotnet.microsoft.com/download/dotnet/9.0\n"
-                 "and the Microsoft Visual C++ Redistributable (x64): https://aka.ms/vs/17/release/vc_redist.x64.exe\n")
+NEEDS_RUNTIME = ("\n普通包需要安装 .NET 9 桌面运行时（x64）：https://dotnet.microsoft.com/download/dotnet/9.0\n"
+                 "以及 Microsoft Visual C++ 运行库（x64）：https://aka.ms/vs/17/release/vc_redist.x64.exe\n")
 # What onnxruntime.dll needs beside Windows: the -full zip brings them, so that it has nothing to install.
 VC_RUNTIME = ["msvcp140.dll", "msvcp140_1.dll", "vcruntime140.dll", "vcruntime140_1.dll"]
 
@@ -66,7 +66,7 @@ def main():
         dsn = json.loads(settings.read_text(encoding="utf-8")).get("ReportDsn") or ""
     print(f"publishing {name}..." + ("" if dsn else " (no Sentry DSN: bug reports will only be saved locally)"))
     subprocess.run(["dotnet", "publish", str(ROOT / "src/Tartarus.App"), "-c", "Release", "-p:Platform=x64", "-r", "win-x64",
-                    f"-p:SelfContained={'true' if a.full else 'false'}", f"-p:SentryDsn={dsn}", "-o", str(app), "-v", "q", "-nologo",
+                    f"-p:SelfContained={'true' if a.full else 'false'}", f"-p:SentryDsn={dsn}", "-o", str(app), "-v", "q", "-nologo", "-m:1",
                     # Its own build folders: the running app's exe in bin/ stays as it is.
                     "--artifacts-path", str(a.out / ".artifacts")], check=True)
     for junk in list(app.rglob("*.pdb")) + list(app.rglob("*.lib")):

@@ -6,15 +6,17 @@ namespace Tartarus.App;
 /// <summary>New versions: asked of GitHub at start and every few hours, installed by the Update button.</summary>
 public partial class ControlWindow
 {
+    // Disabled for the Chinese branch: releases are downloaded manually from GitHub.
+    private static readonly bool AutomaticUpdatesEnabled = false;
     private static readonly TimeSpan UpdateEvery = TimeSpan.FromHours(6);
     private Updates.Release? _update;
     private CancellationTokenSource? _updateChecks;
     private bool _updating;
 
-    /// <summary>The checkbox as the settings have it (on the first time); the debug window neither shows it nor checks.</summary>
+    /// <summary>Update controls are hidden while automatic updates are disabled, including with old settings.</summary>
     private void SetupUpdates()
     {
-        if (_settings.Debug)
+        if (!AutomaticUpdatesEnabled || _settings.Debug)
         {
             UpdatePanel.Visibility = Visibility.Collapsed;
             return;
@@ -25,7 +27,7 @@ public partial class ControlWindow
 
     private void UpdateCheck_Changed(object sender, RoutedEventArgs e)
     {
-        bool on = UpdateCheck.IsChecked == true;
+        bool on = AutomaticUpdatesEnabled && UpdateCheck.IsChecked == true;
         if (_settings.CheckUpdates != on)
         {
             _settings.CheckUpdates = on;

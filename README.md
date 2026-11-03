@@ -37,12 +37,13 @@
 
 ## 安装与使用
 
-1. 下载发布版 zip，解压到任意位置，运行 `TartarusSolver.exe`。
+1. 在[中文版发布页](https://github.com/wayde1122/TartarusSolver-cn/releases/latest)下载 zip，推荐选择包含运行库的 `-full.zip`；解压到任意位置，运行 `TartarusSolver.exe`。
 2. 启动游戏并进入塔罗斯监狱。程序会自动找到游戏窗口和日志文件（也可以在控制窗口中手动选择）。
 3. 开始游戏。叠加层会针对屏幕上的内容显示提示。
 
-新版本：开启「检查更新」（默认开启）时，程序在启动时和之后每 6 小时向 GitHub 查询最新发布版；有新版本时，
-点击「更新到 …」即可下载、校验并重启到新版本。除此之外不会发送任何数据。
+中文版暂时屏蔽自动检查更新及其界面入口，即使旧设置中的 `CheckUpdates` 为 `true` 也不会查询新版本。
+请在[中文版发布页](https://github.com/wayde1122/TartarusSolver-cn/releases)手动下载新版。
+
 | 快捷键 | |
 |---|---|
 | Ctrl+Shift+S | 立即扫描 |
@@ -62,7 +63,7 @@
 - `DetectGameLanguage`：是否从游戏设置中自动读取语言（「自动检测」开关）；在语言列表中手动选择会关闭自动检测。
 - `GameLanguage`：手动选择的游戏语言（`en`、`ru`、`zh` 等）；关闭自动检测后使用。为空时，在首次连接游戏时询问。
 - `HintPlayouts`、`HintSeconds`：求解器每步的计算量（也可用控制窗口中的滑块调节）。
-- `CheckUpdates`：是否向 GitHub 查询新版本（窗口中的复选框）。
+- `CheckUpdates`：为兼容旧设置保留；中文版暂时禁用自动检查更新。
 - `Hotkeys`、`GameLogPath`、`ReportDsn`。
 
 ## 构建
@@ -83,6 +84,17 @@ dotnet test tests/Tartarus.Rules.Tests -c Release
 ```bash
 python tools/package.py
 ```
+
+### GitHub Actions 自动打包
+
+推送相关代码到 `main` 后，[Build Chinese release](https://github.com/wayde1122/TartarusSolver-cn/actions/workflows/package.yml)
+会运行 Release 构建和测试，生成普通包、包含 .NET 和 VC++ 运行库的完整包，以及 `SHA256SUMS.txt`。
+在对应运行的 Artifacts 中下载打包结果（保留 30 天）。
+
+发布供所有人下载的 Release：推送 `v版本-cn.序号` 标签，例如 `v0.7.39-cn.1`，版本必须与 `Directory.Build.props` 一致；
+也可以在 Actions 中点击 **Run workflow**，填写同格式的 `release_tag`。留空则只打包。
+中文标签与上游的 `v0.7.39` 标签分开，保留上游标签原有指向。Release 附件长期保留，无需把二进制包提交到 Git。
+工作流使用 GitHub 自动提供的 `GITHUB_TOKEN`，不需要另配个人令牌；打包和校验全部通过后才发布 Release。
 
 构建时提供 DSN，错误报告就会发送到 Sentry：设置环境变量 `TARTARUS_SENTRY_DSN`（或传入 `-p:SentryDsn=…`，或在设置中
 填写 `ReportDsn`）。没有 DSN 时，报告保存在 `%LOCALAPPDATA%\TartarusSolver\reports`。

@@ -74,7 +74,7 @@ public sealed class AppSettings
     /// <summary>A random id of this install: tells one tester's reports from another's, and nothing else about them.</summary>
     public string InstallId { get; set; } = Guid.NewGuid().ToString("N")[..12];
     /// <summary>Ask GitHub for a new version (the player's window; never with --debug).</summary>
-    public bool CheckUpdates { get; set; } = true;
+    public bool CheckUpdates { get; set; } = false;
     public double? ControlLeft { get; set; }
     public double? ControlTop { get; set; }
 

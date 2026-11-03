@@ -1,0 +1,136 @@
+name: Build Chinese release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*-cn.*']
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'models/**'
+      - 'tools/package.py'
+      - 'tools/verify_package.py'
+      - 'Directory.Build.props'
+      - 'TartarusSolver.sln'
+      - '.github/workflows/package.yml'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '留空仅打包；填写 v版本-cn.序号（例如 v0.7.39-cn.1）则发布 Release'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    outputs:
+      release_tag: ${{ steps.metadata.outputs.release_tag }}
+      version: ${{ steps.metadata.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check version and release tag
+        id: metadata
+        shell: pwsh
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          $version = $props.Project.PropertyGroup.Version
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { $env:REQUESTED_TAG }
+          if ($tag -and $tag -notmatch ('^v' + [regex]::Escape($version) + '-cn\.[1-9][0-9]*$')) {
+            throw "Release 标签必须与源码版本一致：v$version-cn.序号"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "release_tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Cache verified OCR models
+        uses: actions/cache@v4
+        with:
+          path: models/ocr
+          key: ocr-${{ runner.os }}-${{ hashFiles('src/Tartarus.Vision/Tartarus.Vision.csproj') }}
+
+      - name: Build and test
+        shell: pwsh
+        run: |
+          dotnet build TartarusSolver.sln -c Release -p:Platform=x64 -m:1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          dotnet test tests/Tartarus.Rules.Tests -c Release -p:Platform=x64 --no-build --no-restore --logger "trx;LogFileName=tests.trx" --results-directory dist/test-results
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build standard and full packages
+        shell: pwsh
+        run: |
+          python tools/package.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/package.py --full
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/verify_package.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: TartarusSolver-${{ steps.metadata.outputs.version }}-cn
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: dist/test-results/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    needs: package
+    if: needs.package.outputs.release_tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: TartarusSolver-${{ needs.package.outputs.version }}-cn
+          path: release
+
+      - name: Publish Chinese release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.package.outputs.release_tag }}
+          APP_VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          cat > notes.md <<'NOTES'
+          简体中文版，保留中文界面、控制窗口布局和自定义图标。
+
+          - 推荐下载 `-full.zip`：包含 .NET 9、Visual C++ 运行库和中英文/俄文 OCR，解压后运行 `TartarusSolver.exe`。
+          - 普通 `.zip` 体积更小，需要自行安装 .NET 9 桌面运行时和 Visual C++ 运行库（x64）。
+          - 自动检查更新已屏蔽，请在本仓库 Releases 页面手动下载新版。
+          - 两种包均通过 Release 构建、自动测试、压缩包完整性及模型/依赖校验；校验值见 `SHA256SUMS.txt`。
+          NOTES
+          gh release create "$RELEASE_TAG" --draft --target "$GITHUB_SHA" --title "Tartarus Solver $APP_VERSION 中文版" --notes-file notes.md
+          gh release upload "$RELEASE_TAG" release/*.zip release/SHA256SUMS.txt
+          gh release edit "$RELEASE_TAG" --draft=false --latest
