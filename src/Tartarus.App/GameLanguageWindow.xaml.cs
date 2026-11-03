@@ -19,13 +19,14 @@ public partial class GameLanguageWindow : Window
     {
         InitializeComponent();
         Message.Text = first
-            ? "游戏显示的是哪种语言？程序需要使用相应语言识别游戏文字。已选中从游戏设置中检测到的语言。"
-            : $"无法按 {OcrPacks.LanguageName(current)} 识别游戏文字：走法提示可能缺失或出错。"
-                + "游戏显示的是哪种语言？";
+            ? "已选中从游戏设置中检测到的语言。"
+            : $"无法按 {OcrPacks.LanguageName(current)} 识别游戏文字：走法提示可能缺失或出错。";
         foreach (var code in OcrPacks.GameLanguages)
         {
             string name = OcrPacks.LanguageName(code), native = OcrPacks.NativeName(code);
-            var item = new ListBoxItem { Content = name == native ? name : $"{name} · {native}", Tag = code };
+            // The question in each language beside it: the player who most needs this window may read no English
+            // (2026-11-02: a third of those asked said "Not now", and played on hints that couldn't see the cards).
+            var item = new ListBoxItem { Content = $"{(name == native ? name : $"{name} · {native}")} — {OcrPacks.ChooseLanguage(code)}", Tag = code };
             LanguageList.Items.Add(item);
             if (first && name == OcrPacks.LanguageName(current)) LanguageList.SelectedItem = item;
         }

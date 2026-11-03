@@ -1,7 +1,7 @@
 # Tartarus Solver（中文版）
 
 > 本仓库是 [glcoder/TartarusSolver](https://github.com/glcoder/TartarusSolver) 的中文化分支，界面和文档译为简体中文。
-> 原项目作者为 Artem Gurevich，以 MIT 协议发布。功能已同步至 [v0.7.36](https://github.com/glcoder/TartarusSolver/commit/407e2800bf118c11248d28134b68caff25f4b932)，保留中文界面和本分支的控制窗口布局。
+> 原项目作者为 Artem Gurevich，以 MIT 协议发布。功能已同步至 [v0.7.39](https://github.com/glcoder/TartarusSolver/commit/4ab0bc0)，保留中文界面和本分支的控制窗口布局。
 
 为《火炬之光：无限》（第 16 赛季）的沙盘玩法**塔罗斯监狱**提供走法提示，以叠加层的形式绘制在游戏窗口之上。
 
@@ -31,7 +31,8 @@
 ## 系统要求
 
 - Windows 10（2004）或 11，x64。
-- [.NET 9 桌面运行时](https://dotnet.microsoft.com/download/dotnet/9.0)（使用 `-full` 发布包则不需要）。
+- [.NET 9 桌面运行时](https://dotnet.microsoft.com/download/dotnet/9.0)和
+  [Microsoft Visual C++ 运行库（x64）](https://aka.ms/vs/17/release/vc_redist.x64.exe)（使用 `-full` 发布包则都不需要另行安装）。
 - 《火炬之光：无限》需以窗口或无边框模式运行：叠加层无法绘制在独占全屏之上。
 
 ## 安装与使用
